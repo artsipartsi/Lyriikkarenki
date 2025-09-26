@@ -8,7 +8,7 @@ function App() {
 
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", padding: 24 }}>
-      <h1>Hei maailma!</h1>
+      <h1>Hei maailma! (testi)</h1>
       <p>Tämä julkaistaan Verceliin. Myöhemmin lisätään ChatGPT-haku.</p>
     </div>
   )
