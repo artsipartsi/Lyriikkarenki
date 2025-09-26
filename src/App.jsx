@@ -236,7 +236,7 @@ export default function App() {
     <div style={{ fontFamily: "system-ui, sans-serif", padding: 16, maxWidth: 1200, margin: "0 auto" }}>
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <h1 style={{ margin: 0 }}>Lyriikkarenki v0.0</h1>
+        <h1 style={{ margin: 0 }}>Lyriikkarenki v0.1</h1>
         <button
           onClick={() => setShowSettings((s) => !s)}
           title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
