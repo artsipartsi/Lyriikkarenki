@@ -159,7 +159,7 @@ export default function App() {
         <div style={headerInner}>
           <div style={{ textAlign: "center" }}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionStyle}>v0.3</div>
+            <div style={versionStyle}>v0.2</div>
           </div>
           <button
             onClick={() => setShowSettings((s) => !s)}
@@ -211,7 +211,7 @@ export default function App() {
               onChange={(e) => setFreeform(e.target.value)}
               rows={3}
               placeholder="Esim. 'sävy melankolinen', 'vältä anglismeja', '8 tavua / rivi'..."
-              style={{ ...textareaStyle, minHeight: 0, height: "auto" }} 
+              style={textareaStyle}
             />
           </div>
 
@@ -341,7 +341,7 @@ const headerInner = {
 };
 
 const titleStyle = {
-  fontSize: 20,
+  fontSize: 18,
   fontWeight: 800,
   letterSpacing: 0.2,
   margin: 0,
@@ -349,7 +349,7 @@ const titleStyle = {
 };
 
 const versionStyle = {
-  fontSize: 12,
+  fontSize: 11,
   color: "#6b7280",
   marginTop: 2,
 };
