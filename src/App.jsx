@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.4
+ * Lyriikkarenki – v0.5
  * - Pieni, keskitetty otsikko + versio
  * - Asetukset-paneeli (hammasratas)
  * - Valinnat: kielikuvia, synonyymejä, riimiehdotuksia
@@ -9,8 +9,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
  * - Villiyden liukusäädin (0.0–1.0)
  * - Ehdota-painike näkyy AINA paneelien yläpuolella (ei asetuksissa)
  * - Sanoittajan ikkuna (muokattava) + Ehdotukset (readOnly)
- * - Peru / Uudelleen -historia sanoittajan tekstille
- * - UUTTA: Kehittäjätila (Ctrl+Alt+D tai ?dev=1) näyttää AI-promptin esikatselun
+ * - Undo/redo sanoittajan tekstille
+ * - Kehittäjätila (Ctrl+Alt+D tai ?dev=1) näyttää AI-promptin esikatselun
+ * - UUTTA: Prompt-esikatselu päivittyy myös valinnan/kursorin liikkeestä.
+ *         Jos valinta on olemassa → analysoidaan valinta,
+ *         muuten analysoidaan KOKO kursoririvi.
  */
 
 export default function App() {
@@ -25,11 +28,7 @@ export default function App() {
     new URLSearchParams(window.location.search).get("dev") === "1" ||
     localStorage.getItem("lr_dev") === "true";
   const [devMode, setDevMode] = useState(initialDev);
-
-  useEffect(() => {
-    localStorage.setItem("lr_dev", String(devMode));
-  }, [devMode]);
-
+  useEffect(() => localStorage.setItem("lr_dev", String(devMode)), [devMode]);
   useEffect(() => {
     const onKey = (e) => {
       if (e.ctrlKey && e.altKey && (e.key === "d" || e.key === "D")) {
@@ -109,31 +108,32 @@ export default function App() {
   );
 
   // --- Promptin muodostus ---
-  const getSelectionOrLastLine = () => {
-  const el = authorRef.current;
-  if (!el) return "";
+  // Valinnan/kursorin “tikkeri” -> pakottaa esikatselun päivityksen
+  const [selTick, setSelTick] = useState(0);
+  const bumpSel = () => setSelTick((t) => t + 1);
 
-  const start = el.selectionStart ?? 0;
-  const end   = el.selectionEnd   ?? 0;
+  const getSelectionOrCurrentLine = () => {
+    const el = authorRef.current;
+    if (!el) return "";
 
-  // 1) Jos valinta on olemassa, käytä sitä
-  if (start !== end) {
-    return authorText.slice(start, end).trim();
-  }
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
 
-  // 2) Muuten käytä koko riviä, jossa kursori on
-  const text = authorText;
-  const caret = start;
+    // 1) Jos valinta on olemassa → käytä valintaa
+    if (start !== end) {
+      return authorText.slice(start, end).trim();
+    }
 
-  // Etsi rivin alku: viimeinen \n ennen kursoria (+1 jotta aloitetaan seuraavasta merkistä)
-  const lineStart = text.lastIndexOf("\n", Math.max(0, caret - 1)) + 1;
+    // 2) Muuten käytä KOKO riviä, jossa kursori on
+    const text = authorText;
+    const caret = start;
 
-  // Etsi rivin loppu: ensimmäinen \n kursorin jälkeen (tai tekstin loppu)
-  const nextNL = text.indexOf("\n", caret);
-  const lineEnd = nextNL === -1 ? text.length : nextNL;
+    const lineStart = text.lastIndexOf("\n", Math.max(0, caret - 1)) + 1;
+    const nextNL = text.indexOf("\n", caret);
+    const lineEnd = nextNL === -1 ? text.length : nextNL;
 
-  return text.slice(lineStart, lineEnd).trim();
-};
+    return text.slice(lineStart, lineEnd).trim();
+  };
 
   const buildPrompt = (basis) => {
     let p =
@@ -155,17 +155,21 @@ export default function App() {
 
   // Kehittäjätilan prompt-esikatselu
   const [promptPreview, setPromptPreview] = useState("");
-  useEffect(() => {
+  const refreshPromptPreview = () => {
     if (!devMode) return;
-    const basis = getSelectionOrLastLine();
-    setPromptPreview(buildPrompt(basis || "<ei valintaa / viimeinen rivi tyhjä>"));
+    const basis = getSelectionOrCurrentLine();
+    setPromptPreview(buildPrompt(basis || "<ei valintaa / kursoririvi tyhjä>"));
+  };
+
+  useEffect(() => {
+    refreshPromptPreview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [devMode, authorText, wantMetaphors, wantSynonyms, wantRhymes, wildness, freeform]);
+  }, [devMode, authorText, wantMetaphors, wantSynonyms, wantRhymes, wildness, freeform, selTick]);
 
   const askSuggestions = async () => {
-    const basis = getSelectionOrLastLine();
+    const basis = getSelectionOrCurrentLine();
     if (!basis) {
-      setError("Valitse tekstiä tai kirjoita rivi, josta haluat ehdotuksia.");
+      setError("Valitse tekstiä tai siirrä kursori riville, josta haluat ehdotuksia.");
       return;
     }
     setError("");
@@ -193,6 +197,7 @@ export default function App() {
       setError(e.message || String(e));
     } finally {
       setLoading(false);
+      refreshPromptPreview(); // pitää esikatselun synkassa
     }
   };
 
@@ -267,7 +272,7 @@ export default function App() {
                 <span style={devBadge}>DEV</span>
                 <strong>AI-prompt (esikatselu)</strong>
                 <span style={{ color: "#6b7280", fontSize: 12 }}>
-                  (päivittyy valinnan/viimeisen rivin ja asetusten mukaan)
+                  (päivittyy valinnan/kurssorin ja asetusten mukaan)
                 </span>
               </div>
               <textarea
@@ -299,12 +304,12 @@ export default function App() {
           </div>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-            {/* HUOM: Ehdota-painike EI ole enää asetuksissa */}
             <button
               onClick={() => {
                 setAuthorText("");
                 setHistory([""]);
                 setHistIndex(0);
+                bumpSel();
               }}
               style={btnStyle}
             >
@@ -331,7 +336,7 @@ export default function App() {
           {loading ? "Haetaan..." : "Ehdota"}
         </button>
         <span style={{ color: "#6b7280", fontSize: 12 }}>
-          Vihje: valitse tekstiä tai jätä valitsematta — käytämme viimeistä riviä.
+          Vihje: valitse tekstiä tai jätä valitsematta — käytämme kursoririviä.
         </span>
       </section>
 
@@ -342,7 +347,15 @@ export default function App() {
           <textarea
             ref={authorRef}
             value={authorText}
-            onChange={(e) => setAuthorTextWithHistory(e.target.value)}
+            onChange={(e) => {
+              setAuthorTextWithHistory(e.target.value);
+              bumpSel();
+            }}
+            onSelect={bumpSel}  // valinnan muutokset
+            onKeyUp={bumpSel}   // kursorin siirrot nuolilla
+            onMouseUp={bumpSel} // klikkaus eri kohtaan
+            onFocus={bumpSel}
+            onBlur={bumpSel}
             placeholder="Kirjoita tai liitä sanoitus tähän..."
             rows={20}
             style={textareaStyle}
