@@ -159,7 +159,7 @@ export default function App() {
         <div style={headerInner}>
           <div style={{ textAlign: "center" }}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionStyle}>v0.1</div>
+            <div style={versionStyle}>v0.2</div>
           </div>
           <button
             onClick={() => setShowSettings((s) => !s)}
