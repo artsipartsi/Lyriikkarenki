@@ -110,30 +110,17 @@ export default function App() {
 
   // --- Promptin muodostus ---
   const getSelectionOrLastLine = () => {
-  const el = authorRef.current;
-  if (!el) return "";
+    const el = authorRef.current;
+    if (!el) return "";
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    if (start !== end) return authorText.slice(start, end).trim();
 
-  const start = el.selectionStart ?? 0;
-  const end   = el.selectionEnd   ?? 0;
-
-  // 1) Jos valinta on olemassa, käytä sitä
-  if (start !== end) {
-    return authorText.slice(start, end).trim();
-  }
-
-  // 2) Muuten käytä koko riviä, jossa kursori on
-  const text = authorText;
-  const caret = start;
-
-  // Etsi rivin alku: viimeinen \n ennen kursoria (+1 jotta aloitetaan seuraavasta merkistä)
-  const lineStart = text.lastIndexOf("\n", Math.max(0, caret - 1)) + 1;
-
-  // Etsi rivin loppu: ensimmäinen \n kursorin jälkeen (tai tekstin loppu)
-  const nextNL = text.indexOf("\n", caret);
-  const lineEnd = nextNL === -1 ? text.length : nextNL;
-
-  return text.slice(lineStart, lineEnd).trim();
-};
+    // viimeinen rivi ennen kursoria
+    const before = authorText.slice(0, start);
+    const lines = before.split("\n");
+    return (lines[lines.length - 1] || "").trim();
+  };
 
   const buildPrompt = (basis) => {
     let p =
@@ -204,7 +191,7 @@ export default function App() {
         <div style={headerInner}>
           <div style={{ textAlign: "center" }}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionStyle}>v0.5</div>
+            <div style={versionStyle}>v0.4</div>
           </div>
           <button
             onClick={() => setShowSettings((s) => !s)}
