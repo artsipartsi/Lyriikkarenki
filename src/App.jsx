@@ -138,7 +138,7 @@ export default function App() {
   const buildPrompt = (basis) => {
     let p =
       `Analysoi annettu teksti ja tee hyvin lyhyitä ehdotuksia, ` +
-      `älä selitä mitään, älä käytä otsikoita äläkä listmerkkejä.\n`;
+      `älä selitä mitään, älä käytä otsikoita äläkä rivin alussa numeroita tai ranskalaisia viivoja.\n`;
     p += `Teksti: """${basis}"""\n\n`;
 
     const wants = [];
@@ -149,7 +149,7 @@ export default function App() {
     if (wants.length) p += `Sisällytä: ${wants.join(", ")}.\n`;
     if (freeform.trim()) p += `Lisäohje: ${freeform.trim()}\n`;
 
-    p += `\nPalauta 1–8 kohtaa, yksi per rivi, ilman selittävää esipuhetta.\n`;
+    p += `\nPalauta 1–4 kohtaa, yksi per rivi, ilman selittävää esipuhetta.\n`;
     return p;
   };
 
@@ -192,7 +192,8 @@ export default function App() {
       const content = (data?.content || "").trim();
       if (!content) throw new Error("Tyhjä vastaus.");
       const stamp = new Date().toLocaleString();
-      setRenkiText((prev) => prev + `--- Ehdotukset (${stamp}) ---\n${content}\n\n`);
+      //setRenkiText((prev) => prev + `--- Ehdotukset (${stamp}) ---\n${content}\n\n`);
+      setRenkiText((prev) => prev + `---------------\n${content}\n`);
     } catch (e) {
       setError(e.message || String(e));
     } finally {
