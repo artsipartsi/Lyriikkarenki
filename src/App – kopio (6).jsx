@@ -206,24 +206,23 @@ export default function App() {
   return (
     <div style={pageWrap}>
       {/* Sticky header */}
-<header style={headerWrap}>
-  <div style={headerInner}>
-    {/* OTSAKE + VERSIO SAMALLA RIVILLÄ */}
-    <div style={titleRow}>
-      <div style={titleStyle}>Lyriikkarenki</div>
-      <div style={versionInline}>v0.5</div>
-    </div>
+      <header style={headerWrap}>
+        <div style={headerInner}>
+          <div style={{ textAlign: "center" }}>
+            <div style={titleStyle}>Lyriikkarenki</div>
+            <div style={versionStyle}>v0.5</div>
+          </div>
+          <button
+            onClick={() => setShowSettings((s) => !s)}
+            title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
+            style={iconButtonStyle}
+            aria-label="Asetukset"
+          >
+            ⚙
+          </button>
+        </div>
+      </header>
 
-    <button
-      onClick={() => setShowSettings((s) => !s)}
-      title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
-      style={iconButtonStyle}
-      aria-label="Asetukset"
-    >
-      ⚙
-    </button>
-  </div>
-</header>
       {/* Settings card */}
       {showSettings && (
         <section style={card}>
@@ -434,6 +433,15 @@ const headerInner = {
   padding: "10px 0",
 };
 
+const titleStyle = {
+  fontSize: 20,
+  fontWeight: 800,
+  letterSpacing: 0.2,
+  margin: 0,
+  lineHeight: 1.05,
+  textAlign: "center",
+};
+
 const versionStyle = {
   fontSize: 12,
   color: "#6b7280",
@@ -524,25 +532,3 @@ const devBadge = {
   color: "#3730a3",
   border: "1px solid #c7d2fe",
 };
-
-const titleRow = {
-  display: "flex",
-  alignItems: "baseline",   // versio asettuu otsikon alaviivalle
-  gap: 8,
-  textAlign: "center",
-};
-
-const titleStyle = {
-  fontSize: 20,
-  fontWeight: 800,
-  letterSpacing: 0.2,
-  margin: 0,
-  lineHeight: 1.05,
-};
-
-const versionInline = {
-  fontSize: 12,
-  color: "#6b7280",
-  lineHeight: 1,
-};
-
