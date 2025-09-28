@@ -1,25 +1,25 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import './App.css'
 
 /**
- * Lyriikkarenki – perus-UI ja logiikka
- * - Otsikko + Asetukset (hammasratas)
- * - Valintaruudut: autoOnEnter, metaphors, synonyms, rhymes
- * - Painikkeet: ehdota, tyhjennä sanoittaja, peru, uudelleen, tyhjennä renki, piilota asetukset
- * - Vapaamuotoinen ohje
+ * Lyriikkarenki – v0.1
+ * - Pieni, keskitetty otsikko + versio
+ * - Asetukset-paneeli (hammasratas)
+ * - Valinnat: kielikuvia, synonyymejä, riimiehdotuksia
+ * - Vapaamuotoinen ohje (3 riviä)
  * - Villiyden liukusäädin (0.0–1.0)
- * - Tekstikentät: Sanoittajan ikkuna (muokattava), Rengin ikkuna (readOnly)
+ * - Sanoittajan ikkuna (muokattava) + Rengin ikkuna (readOnly)
+ * - Ehdota-painike muodostaa promptin ja kutsuu /api/chat
+ * - Peru / Uudelleen -historia sanoittajan tekstille
  */
 
 export default function App() {
-  // UI state
+  // --- UI ---
   const [showSettings, setShowSettings] = useState(() => {
     const saved = localStorage.getItem("lr_showSettings");
     return saved ? saved === "true" : true;
   });
 
-  // Options (persist to localStorage)
-  const [autoOnEnter, setAutoOnEnter] = useState(() => lsBool("lr_autoOnEnter", false));
+  // --- Valinnat (persist) ---
   const [wantMetaphors, setWantMetaphors] = useState(() => lsBool("lr_metaphors", true));
   const [wantSynonyms, setWantSynonyms] = useState(() => lsBool("lr_synonyms", true));
   const [wantRhymes, setWantRhymes] = useState(() => lsBool("lr_rhymes", true));
@@ -29,32 +29,23 @@ export default function App() {
   });
   const [freeform, setFreeform] = useState(() => localStorage.getItem("lr_freeform") || "");
 
-  // Main text areas
-  const [authorText, setAuthorText] = useState("");
-  const [renkiText, setRenkiText] = useState("");
-
-  // Undo/redo history for author
-  const [history, setHistory] = useState([""]);
-  const [histIndex, setHistIndex] = useState(0);
-
-  // Loading/error
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  // Refs
-  const authorRef = useRef(null);
-  const lastEnterFiredRef = useRef(false); // estetään tuplalaukaisu rivinvaihdosta
-
-  // Persist options
   useEffect(() => localStorage.setItem("lr_showSettings", String(showSettings)), [showSettings]);
-  useEffect(() => localStorage.setItem("lr_autoOnEnter", String(autoOnEnter)), [autoOnEnter]);
   useEffect(() => localStorage.setItem("lr_metaphors", String(wantMetaphors)), [wantMetaphors]);
   useEffect(() => localStorage.setItem("lr_synonyms", String(wantSynonyms)), [wantSynonyms]);
   useEffect(() => localStorage.setItem("lr_rhymes", String(wantRhymes)), [wantRhymes]);
   useEffect(() => localStorage.setItem("lr_wildness", String(wildness)), [wildness]);
   useEffect(() => localStorage.setItem("lr_freeform", freeform), [freeform]);
 
-  // Update history when authorText changes by user typing (not programmatic undo/redo set)
+  // --- Tekstit ---
+  const [authorText, setAuthorText] = useState("");
+  const [renkiText, setRenkiText] = useState("");
+
+  // --- Historia sanoittajalle ---
+  const [history, setHistory] = useState([""]);
+  const [histIndex, setHistIndex] = useState(0);
+  const canUndo = histIndex > 0;
+  const canRedo = histIndex < history.length - 1;
+
   const setAuthorTextWithHistory = (next) => {
     setAuthorText(next);
     setHistory((h) => {
@@ -65,16 +56,12 @@ export default function App() {
     setHistIndex((i) => i + 1);
   };
 
-  const canUndo = histIndex > 0;
-  const canRedo = histIndex < history.length - 1;
-
   const undo = () => {
     if (!canUndo) return;
     const i = histIndex - 1;
     setHistIndex(i);
     setAuthorText(history[i]);
   };
-
   const redo = () => {
     if (!canRedo) return;
     const i = histIndex + 1;
@@ -82,64 +69,62 @@ export default function App() {
     setAuthorText(history[i]);
   };
 
-  // Helpers to get selection or last line
+  // --- Tila ---
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // --- Ref ---
+  const authorRef = useRef(null);
+
+  // --- Layout ---
+  const isWide = useMediaQuery("(min-width: 900px)");
+  const layoutStyle = useMemo(
+    () => ({
+      display: "grid",
+      gridTemplateColumns: isWide ? "1fr 1fr" : "1fr",
+      gap: 12,
+    }),
+    [isWide]
+  );
+
+  // --- Promptin muodostus ---
   const getSelectionOrLastLine = () => {
     const el = authorRef.current;
-    if (!el) return { basis: "", type: "none" };
-
+    if (!el) return "";
     const start = el.selectionStart ?? 0;
     const end = el.selectionEnd ?? 0;
+    if (start !== end) return authorText.slice(start, end).trim();
 
-    if (start !== end) {
-      return { basis: authorText.slice(start, end), type: "selection" };
-    }
-
-    // last line before caret
+    // viimeinen rivi ennen kursoria
     const before = authorText.slice(0, start);
     const lines = before.split("\n");
-    return { basis: lines[lines.length - 1] ?? "", type: "lastLine" };
+    return (lines[lines.length - 1] || "").trim();
   };
 
-  // Prompt builder
   const buildPrompt = (basis) => {
-    let p = `Analysoi annettu teksti ja tuota listamuotoisia ehdotuksia suomeksi.\n`;
-    p += `Teksti: """${basis.trim()}"""\n\n`;
+    let p = `Analysoi annettu teksti ja tee suomeksi napakoita ehdotuksia.\n`;
+    p += `Teksti: """${basis}"""\n\n`;
 
     const wants = [];
     if (wantMetaphors) wants.push("kielikuvia (metaforia, vertauskuvia)");
     if (wantSynonyms) wants.push("synonyymejä ja vaihtoehtoisia ilmauksia");
-    if (wantRhymes) wants.push("riimiehdotuksia ja loppusointi-ideoita");
+    if (wantRhymes) wants.push("riimiehdotuksia ja loppusointivariaatioita");
 
-    if (wants.length) {
-      p += `Sisällytä: ${wants.join(", ")}.\n`;
-    } else {
-      p += `Jos mitään erityistä ei pyydetä, ehdota ytimekkäitä parannuksia rivirakenteeseen tai sanavalintoihin.\n`;
-    }
+    if (wants.length) p += `Sisällytä: ${wants.join(", ")}.\n`;
+    if (freeform.trim()) p += `Lisäohje: ${freeform.trim()}\n`;
 
-    if (freeform.trim()) {
-      p += `\nLisäohje: ${freeform.trim()}\n`;
-    }
-
-    // Ohjeistetaan muoto
-    p += `\nPalauta napakka luettelo (1–8 kohtaa). Jokainen kohta omalle rivilleen ilman selittelyä. Älä toista annettua tekstiä.\n`;
-
+    p += `\nPalauta 1–8 kohtaa, yksi per rivi, ilman selittävää esipuhetta.\n`;
     return p;
   };
 
-  // Call API
-  const askSuggestions = async (explicitBasis) => {
-    const basisObj = explicitBasis
-      ? { basis: explicitBasis, type: "given" }
-      : getSelectionOrLastLine();
-
-    const basis = (basisObj.basis || "").trim();
+  const askSuggestions = async () => {
+    const basis = getSelectionOrLastLine();
     if (!basis) {
-      setError("Valitse tekstiä tai kirjoita rivi ensin.");
+      setError("Valitse tekstiä tai kirjoita rivi, josta haluat ehdotuksia.");
       return;
     }
     setError("");
     setLoading(true);
-
     try {
       const prompt = buildPrompt(basis);
       const r = await fetch("/api/chat", {
@@ -150,19 +135,15 @@ export default function App() {
           temperature: clamp01(wildness),
         }),
       });
-
       if (!r.ok) {
         const t = await r.text();
         throw new Error(`API-virhe ${r.status}: ${t}`);
       }
-
       const data = await r.json();
       const content = (data?.content || "").trim();
       if (!content) throw new Error("Tyhjä vastaus.");
-
       const stamp = new Date().toLocaleString();
-      const toAppend = `--- Ehdotukset (${stamp}) ---\n${content}\n\n`;
-      setRenkiText((prev) => prev + toAppend);
+      setRenkiText((prev) => prev + `--- Ehdotukset (${stamp}) ---\n${content}\n\n`);
     } catch (e) {
       setError(e.message || String(e));
     } finally {
@@ -170,103 +151,31 @@ export default function App() {
     }
   };
 
-  // Handle Enter-triggered suggestions
-  const onAuthorKeyDown = (e) => {
-    if (e.key === "Enter") {
-      // merkitään että Enter painettiin – käsitellään onChange:ssa tai blurissa
-      lastEnterFiredRef.current = true;
-    }
-  };
-
-  const onAuthorChange = (e) => {
-    const next = e.target.value;
-    const prev = authorText;
-
-    setAuthorTextWithHistory(next);
-
-    // automaattinen ehdotus – kun rivinvaihto lisättiin loppuun
-    if (
-      autoOnEnter &&
-      lastEnterFiredRef.current &&
-      next.length >= 1 &&
-      next.length > prev.length &&
-      next.endsWith("\n")
-    ) {
-      // otetaan viimeinen ei-tyhjä rivi (edellinen rivi)
-      const lines = next.split("\n");
-      const justCompleted = (lines[lines.length - 2] || "").trim();
-      if (justCompleted) {
-        // pieni viive, että caret ehtii asettua
-        setTimeout(() => askSuggestions(justCompleted), 0);
-      }
-    }
-    lastEnterFiredRef.current = false;
-  };
-
-  // Buttons
-  const clearAuthor = () => {
-    setAuthorText("");
-    setHistory([""]);
-    setHistIndex(0);
-  };
-  const clearRenki = () => setRenkiText("");
-
-  // Simple responsive layout styles (voit korvata omilla CSS:illä)
-  const layoutStyle = useMemo(
-    () => ({
-      display: "grid",
-      gridTemplateColumns: "1fr",
-      gap: "12px",
-    }),
-    []
-  );
-
-  const wideLayoutStyle = useMemo(
-    () => ({
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gap: "12px",
-    }),
-    []
-  );
-
-  const isWide = useMediaQuery("(min-width: 900px)");
-
+  // --- Render ---
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", padding: 16, maxWidth: 1200, margin: "0 auto" }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <h1 style={{ margin: 0 }}>Lyriikkarenki v0.1</h1>
-        <button
-          onClick={() => setShowSettings((s) => !s)}
-          title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
-          style={iconButtonStyle}
-          aria-label="Asetukset"
-        >
-          ⚙
-        </button>
-      </div>
+    <div style={pageWrap}>
+      {/* Sticky header with subtle bottom border */}
+      <header style={headerWrap}>
+        <div style={headerInner}>
+          <div style={{ textAlign: "center" }}>
+            <div style={titleStyle}>Lyriikkarenki</div>
+            <div style={versionStyle}>v0.1</div>
+          </div>
+          <button
+            onClick={() => setShowSettings((s) => !s)}
+            title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
+            style={iconButtonStyle}
+            aria-label="Asetukset"
+          >
+            ⚙
+          </button>
+        </div>
+      </header>
 
-      {/* Settings */}
+      {/* Settings card */}
       {showSettings && (
-        <div
-          style={{
-            border: "1px solid #ddd",
-            borderRadius: 10,
-            padding: 12,
-            marginBottom: 12,
-            background: "#fafafa",
-          }}
-        >
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
-            <label style={checkStyle}>
-              <input
-                type="checkbox"
-                checked={autoOnEnter}
-                onChange={(e) => setAutoOnEnter(e.target.checked)}
-              />
-              &nbsp;ehdotuksia tehdään joka rivinvaihdolla
-            </label>
+        <section style={card}>
+          <div style={checksRow}>
             <label style={checkStyle}>
               <input
                 type="checkbox"
@@ -301,7 +210,7 @@ export default function App() {
               value={freeform}
               onChange={(e) => setFreeform(e.target.value)}
               rows={3}
-              placeholder="Kerrot tähän lisäohjeen (esim. 'käytä 8 tavun rytmiä', 'älä käytä anglismeja', 'sävytä melankoliseksi' tms.)"
+              placeholder="Esim. 'sävy melankolinen', 'vältä anglismeja', '8 tavua / rivi'..."
               style={textareaStyle}
             />
           </div>
@@ -323,10 +232,10 @@ export default function App() {
           </div>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-            <button onClick={() => askSuggestions()} disabled={loading} style={primaryBtn}>
+            <button onClick={askSuggestions} disabled={loading} style={primaryBtn}>
               {loading ? "Haetaan..." : "Ehdota"}
             </button>
-            <button onClick={clearAuthor} style={btnStyle}>
+            <button onClick={() => { setAuthorText(""); setHistory([""]); setHistIndex(0); }} style={btnStyle}>
               tyhjennä sanoittajan ikkuna
             </button>
             <button onClick={undo} disabled={!canUndo} style={btnStyle}>
@@ -335,7 +244,7 @@ export default function App() {
             <button onClick={redo} disabled={!canRedo} style={btnStyle}>
               tee muutos uudelleen (sanoittajan ikkunassa)
             </button>
-            <button onClick={clearRenki} style={btnStyle}>
+            <button onClick={() => setRenkiText("")} style={btnStyle}>
               tyhjennä rengin ikkuna
             </button>
             <button onClick={() => setShowSettings(false)} style={btnStyle}>
@@ -343,31 +252,26 @@ export default function App() {
             </button>
           </div>
 
-          {error && (
-            <div style={{ color: "#b00020", marginTop: 8 }}>
-              {error}
-            </div>
-          )}
-        </div>
+          {error && <div style={{ color: "#b00020", marginTop: 8 }}>{error}</div>}
+        </section>
       )}
 
-      {/* Two panes: author + renki */}
-      <div style={isWide ? wideLayoutStyle : layoutStyle}>
-        <div>
-          <label style={{ fontWeight: 600, display: "block", marginBottom: 6 }}>Sanoittajan ikkuna</label>
+      {/* Two panes */}
+      <section style={layoutStyle}>
+        <div style={paneCard}>
+          <label style={paneTitle}>Sanoittajan ikkuna</label>
           <textarea
             ref={authorRef}
             value={authorText}
-            onChange={onAuthorChange}
-            onKeyDown={onAuthorKeyDown}
+            onChange={(e) => setAuthorTextWithHistory(e.target.value)}
             placeholder="Kirjoita tai liitä sanoitus tähän..."
             rows={20}
             style={textareaStyle}
           />
         </div>
 
-        <div>
-          <label style={{ fontWeight: 600, display: "block", marginBottom: 6 }}>Rengin ikkuna</label>
+        <div style={paneCard}>
+          <label style={paneTitle}>Rengin ikkuna</label>
           <textarea
             value={renkiText}
             readOnly
@@ -376,23 +280,25 @@ export default function App() {
             style={{ ...textareaStyle, background: "#f7f7f7" }}
           />
         </div>
-      </div>
+      </section>
+
+      <footer style={{ textAlign: "center", color: "#9ca3af", fontSize: 12, padding: "16px 0" }}>
+        © {new Date().getFullYear()} Lyriikkarenki
+      </footer>
     </div>
   );
 }
 
-/* ---------- helpers ---------- */
+/* ---------------- helpers ---------------- */
 
 function clamp01(x) {
   if (Number.isNaN(x)) return 0;
   return Math.min(1, Math.max(0, x));
 }
-
 function lsBool(key, fallback) {
   const v = localStorage.getItem(key);
   return v === null ? fallback : v === "true";
 }
-
 function useMediaQuery(query) {
   const [match, setMatch] = useState(() => window.matchMedia?.(query).matches ?? false);
   useEffect(() => {
@@ -406,7 +312,69 @@ function useMediaQuery(query) {
   return match;
 }
 
-/* ---------- styles ---------- */
+/* ---------------- styles ---------------- */
+
+const pageWrap = {
+  fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
+  background: "linear-gradient(180deg,#fafafa, #ffffff)",
+  minHeight: "100vh",
+  padding: "0 16px",
+};
+
+const headerWrap = {
+  position: "sticky",
+  top: 0,
+  zIndex: 10,
+  background: "rgba(255,255,255,0.9)",
+  backdropFilter: "saturate(180%) blur(6px)",
+  borderBottom: "1px solid #eee",
+};
+
+const headerInner = {
+  maxWidth: 1200,
+  margin: "0 auto",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 12,
+  padding: "10px 0",
+};
+
+const titleStyle = {
+  fontSize: 18,
+  fontWeight: 800,
+  letterSpacing: 0.2,
+  margin: 0,
+  lineHeight: 1.05,
+};
+
+const versionStyle = {
+  fontSize: 11,
+  color: "#6b7280",
+  marginTop: 2,
+};
+
+const card = {
+  maxWidth: 1200,
+  margin: "12px auto",
+  background: "white",
+  border: "1px solid #eee",
+  borderRadius: 12,
+  padding: 14,
+  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+};
+
+const checksRow = { display: "flex", flexWrap: "wrap", gap: 16 };
+
+const paneCard = {
+  background: "white",
+  border: "1px solid #eee",
+  borderRadius: 12,
+  padding: 12,
+  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+};
+
+const paneTitle = { fontWeight: 600, display: "block", marginBottom: 6 };
 
 const textareaStyle = {
   width: "100%",
@@ -415,36 +383,38 @@ const textareaStyle = {
   padding: "10px 12px",
   borderRadius: 8,
   border: "1px solid #ddd",
-  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+  outline: "none",
+  background: "white",
+  fontFamily:
+    "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   lineHeight: 1.4,
 };
 
-const checkStyle = {
-  userSelect: "none",
-};
+const checkStyle = { userSelect: "none" };
 
 const btnStyle = {
   padding: "8px 12px",
-  borderRadius: 8,
-  border: "1px solid #ccc",
+  borderRadius: 10,
+  border: "1px solid #d1d5db",
   background: "white",
   cursor: "pointer",
+  transition: "transform .02s ease",
 };
-
 const primaryBtn = {
   ...btnStyle,
   background: "#111827",
   color: "white",
   borderColor: "#111827",
 };
-
 const iconButtonStyle = {
   ...btnStyle,
-  width: 40,
-  height: 40,
+  width: 36,
+  height: 36,
   borderRadius: 10,
-  fontSize: 20,
-  lineHeight: "20px",
+  fontSize: 18,
+  lineHeight: "18px",
   display: "grid",
   placeItems: "center",
+  position: "absolute",
+  right: 16,
 };
