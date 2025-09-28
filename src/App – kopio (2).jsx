@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.2
+ * Lyriikkarenki – v0.1
  * - Pieni, keskitetty otsikko + versio
  * - Asetukset-paneeli (hammasratas)
  * - Valinnat: kielikuvia, synonyymejä, riimiehdotuksia
- * - Vapaamuotoinen ohje (3 riviä) — oma pienempi tyyli
+ * - Vapaamuotoinen ohje (3 riviä)
  * - Villiyden liukusäädin (0.0–1.0)
- * - Ehdota-painike näkyy AINA paneelien yläpuolella (ei asetuksissa)
  * - Sanoittajan ikkuna (muokattava) + Rengin ikkuna (readOnly)
+ * - Ehdota-painike muodostaa promptin ja kutsuu /api/chat
  * - Peru / Uudelleen -historia sanoittajan tekstille
  */
 
@@ -102,7 +102,7 @@ export default function App() {
   };
 
   const buildPrompt = (basis) => {
-    let p = `Analysoi annettu teksti ja tee hyvin lyhyitä ehdotuksia, älä selitä mitään, älä käytä otsikoita äläkä listmerkkejä.\n`;
+    let p = `Analysoi annettu teksti ja tee suomeksi napakoita ehdotuksia.\n`;
     p += `Teksti: """${basis}"""\n\n`;
 
     const wants = [];
@@ -154,12 +154,12 @@ export default function App() {
   // --- Render ---
   return (
     <div style={pageWrap}>
-      {/* Sticky header */}
+      {/* Sticky header with subtle bottom border */}
       <header style={headerWrap}>
         <div style={headerInner}>
           <div style={{ textAlign: "center" }}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionStyle}>v0.4</div>
+            <div style={versionStyle}>v0.3</div>
           </div>
           <button
             onClick={() => setShowSettings((s) => !s)}
@@ -232,7 +232,9 @@ export default function App() {
           </div>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-            {/* HUOM: Ehdota-painike EI ole enää asetuksissa */}
+            <button onClick={askSuggestions} disabled={loading} style={primaryBtn}>
+              {loading ? "Haetaan..." : "Ehdota"}
+            </button>
             <button onClick={() => { setAuthorText(""); setHistory([""]); setHistIndex(0); }} style={btnStyle}>
               tyhjennä sanoittajan ikkuna
             </button>
@@ -253,16 +255,6 @@ export default function App() {
           {error && <div style={{ color: "#b00020", marginTop: 8 }}>{error}</div>}
         </section>
       )}
-
-      {/* ALWAYS-VISIBLE ACTION BAR */}
-      <section style={toolbarCard}>
-        <button onClick={askSuggestions} disabled={loading} style={primaryBtn}>
-          {loading ? "Haetaan..." : "Ehdota"}
-        </button>
-        <span style={{ color: "#6b7280", fontSize: 12 }}>
-          Vihje: valitse tekstiä tai jätä valitsematta — käytämme viimeistä riviä.
-        </span>
-      </section>
 
       {/* Two panes */}
       <section style={layoutStyle}>
@@ -354,14 +346,12 @@ const titleStyle = {
   letterSpacing: 0.2,
   margin: 0,
   lineHeight: 1.05,
-  textAlign: "center",
 };
 
 const versionStyle = {
   fontSize: 12,
   color: "#6b7280",
   marginTop: 2,
-  textAlign: "center",
 };
 
 const card = {
@@ -372,15 +362,6 @@ const card = {
   borderRadius: 12,
   padding: 14,
   boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-};
-
-const toolbarCard = {
-  ...card,
-  display: "flex",
-  alignItems: "center",
-  gap: 12,
-  paddingTop: 10,
-  paddingBottom: 10,
 };
 
 const checksRow = { display: "flex", flexWrap: "wrap", gap: 16 };
@@ -407,12 +388,6 @@ const textareaStyle = {
   fontFamily:
     "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   lineHeight: 1.4,
-};
-
-const smallTextareaStyle = {
-  ...textareaStyle,
-  minHeight: 0,   // näin rows=3 määrää korkeuden
-  height: "auto",
 };
 
 const checkStyle = { userSelect: "none" };
