@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.4
+ * Lyriikkarenki – v0.2
  * - Pieni, keskitetty otsikko + versio
  * - Asetukset-paneeli (hammasratas)
  * - Valinnat: kielikuvia, synonyymejä, riimiehdotuksia
  * - Vapaamuotoinen ohje (3 riviä) — oma pienempi tyyli
  * - Villiyden liukusäädin (0.0–1.0)
  * - Ehdota-painike näkyy AINA paneelien yläpuolella (ei asetuksissa)
- * - Sanoittajan ikkuna (muokattava) + Ehdotukset (readOnly)
+ * - Sanoittajan ikkuna (muokattava) + Rengin ikkuna (readOnly)
  * - Peru / Uudelleen -historia sanoittajan tekstille
- * - UUTTA: Kehittäjätila (Ctrl+Alt+D tai ?dev=1) näyttää AI-promptin esikatselun
  */
 
 export default function App() {
@@ -19,26 +18,6 @@ export default function App() {
     const saved = localStorage.getItem("lr_showSettings");
     return saved ? saved === "true" : true;
   });
-
-  // --- Kehittäjätila (backdoor) ---
-  const initialDev =
-    new URLSearchParams(window.location.search).get("dev") === "1" ||
-    localStorage.getItem("lr_dev") === "true";
-  const [devMode, setDevMode] = useState(initialDev);
-
-  useEffect(() => {
-    localStorage.setItem("lr_dev", String(devMode));
-  }, [devMode]);
-
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.ctrlKey && e.altKey && (e.key === "d" || e.key === "D")) {
-        setDevMode((v) => !v);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   // --- Valinnat (persist) ---
   const [wantMetaphors, setWantMetaphors] = useState(() => lsBool("lr_metaphors", true));
@@ -123,9 +102,7 @@ export default function App() {
   };
 
   const buildPrompt = (basis) => {
-    let p =
-      `Analysoi annettu teksti ja tee hyvin lyhyitä ehdotuksia, ` +
-      `älä selitä mitään, älä käytä otsikoita äläkä listmerkkejä.\n`;
+    let p = `Analysoi annettu teksti ja tee hyvin lyhyitä ehdotuksia, älä selitä mitään, älä käytä otsikoita äläkä listmerkkejä.\n`;
     p += `Teksti: """${basis}"""\n\n`;
 
     const wants = [];
@@ -139,15 +116,6 @@ export default function App() {
     p += `\nPalauta 1–8 kohtaa, yksi per rivi, ilman selittävää esipuhetta.\n`;
     return p;
   };
-
-  // Kehittäjätilan prompt-esikatselu
-  const [promptPreview, setPromptPreview] = useState("");
-  useEffect(() => {
-    if (!devMode) return;
-    const basis = getSelectionOrLastLine();
-    setPromptPreview(buildPrompt(basis || "<ei valintaa / viimeinen rivi tyhjä>"));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [devMode, authorText, wantMetaphors, wantSynonyms, wantRhymes, wildness, freeform]);
 
   const askSuggestions = async () => {
     const basis = getSelectionOrLastLine();
@@ -243,31 +211,9 @@ export default function App() {
               onChange={(e) => setFreeform(e.target.value)}
               rows={3}
               placeholder="Esim. 'sävy melankolinen', 'vältä anglismeja', '8 tavua / rivi'..."
-              style={{ ...textareaStyle, minHeight: 0, height: "auto" }}
+              style={{ ...textareaStyle, minHeight: 0, height: "auto" }} 
             />
           </div>
-
-          {/* Kehittäjätilan prompt-esikatselu */}
-          {devMode && (
-            <div style={{ marginTop: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                <span style={devBadge}>DEV</span>
-                <strong>AI-prompt (esikatselu)</strong>
-                <span style={{ color: "#6b7280", fontSize: 12 }}>
-                  (päivittyy valinnan/viimeisen rivin ja asetusten mukaan)
-                </span>
-              </div>
-              <textarea
-                readOnly
-                value={promptPreview}
-                rows={8}
-                style={{ ...textareaStyle, minHeight: 0, height: "auto", background: "#fcfcff" }}
-              />
-              <div style={{ color: "#6b7280", fontSize: 12, marginTop: 6 }}>
-                Vinkki: **Ctrl+Alt+D** piilottaa/näyttää kehittäjätilan. Tila tallentuu localStorageen (lr_dev).
-              </div>
-            </div>
-          )}
 
           <div style={{ marginTop: 12 }}>
             <label style={{ fontWeight: 600 }}>
@@ -287,14 +233,7 @@ export default function App() {
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
             {/* HUOM: Ehdota-painike EI ole enää asetuksissa */}
-            <button
-              onClick={() => {
-                setAuthorText("");
-                setHistory([""]);
-                setHistIndex(0);
-              }}
-              style={btnStyle}
-            >
+            <button onClick={() => { setAuthorText(""); setHistory([""]); setHistIndex(0); }} style={btnStyle}>
               tyhjennä sanoittajan ikkuna
             </button>
             <button onClick={undo} disabled={!canUndo} style={btnStyle}>
@@ -467,6 +406,12 @@ const textareaStyle = {
   lineHeight: 1.4,
 };
 
+const smallTextareaStyle = {
+  ...textareaStyle,
+  minHeight: 0,   // näin rows=3 määrää korkeuden
+  height: "auto",
+};
+
 const checkStyle = { userSelect: "none" };
 
 const btnStyle = {
@@ -494,14 +439,4 @@ const iconButtonStyle = {
   placeItems: "center",
   position: "absolute",
   right: 16,
-};
-
-const devBadge = {
-  display: "inline-block",
-  padding: "1px 6px",
-  borderRadius: 6,
-  fontSize: 11,
-  background: "#eef2ff",
-  color: "#3730a3",
-  border: "1px solid #c7d2fe",
 };
