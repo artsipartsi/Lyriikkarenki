@@ -1,7 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.5+ (paneelit mahtuvat pystyyn kun asetukset piilossa)
+ * Lyriikkarenki – v0.5
+ * - Pieni, keskitetty otsikko + versio
+ * - Asetukset-paneeli (hammasratas)
+ * - Valinnat: kielikuvia, synonyymejä, riimiehdotuksia
+ * - Vapaamuotoinen ohje (3 riviä) — oma pienempi tyyli
+ * - Villiyden liukusäädin (0.0–1.0)
+ * - Ehdota-painike näkyy AINA paneelien yläpuolella (ei asetuksissa)
+ * - Sanoittajan ikkuna (muokattava) + Ehdotukset (readOnly)
+ * - Undo/redo sanoittajan tekstille
+ * - Kehittäjätila (Ctrl+Alt+D tai ?dev=1) näyttää AI-promptin esikatselun
+ * - UUTTA: Prompt-esikatselu päivittyy myös valinnan/kursorin liikkeestä.
+ *         Jos valinta on olemassa → analysoidaan valinta,
+ *         muuten analysoidaan KOKO kursoririvi.
  */
 
 export default function App() {
@@ -84,14 +96,13 @@ export default function App() {
   // --- Ref ---
   const authorRef = useRef(null);
 
-  // --- Layout (responsiivinen sarake/rinnakkain) ---
+  // --- Layout ---
   const isWide = useMediaQuery("(min-width: 900px)");
-  const layoutCols = useMemo(
+  const layoutStyle = useMemo(
     () => ({
       display: "grid",
       gridTemplateColumns: isWide ? "1fr 1fr" : "1fr",
       gap: 12,
-      alignItems: "stretch",
     }),
     [isWide]
   );
@@ -104,26 +115,41 @@ export default function App() {
   const getSelectionOrCurrentLine = () => {
     const el = authorRef.current;
     if (!el) return "";
+
     const start = el.selectionStart ?? 0;
     const end = el.selectionEnd ?? 0;
-    if (start !== end) return authorText.slice(start, end).trim();
 
+    // 1) Jos valinta on olemassa → käytä valintaa
+    if (start !== end) {
+      return authorText.slice(start, end).trim();
+    }
+
+    // 2) Muuten käytä KOKO riviä, jossa kursori on
     const text = authorText;
     const caret = start;
+
     const lineStart = text.lastIndexOf("\n", Math.max(0, caret - 1)) + 1;
     const nextNL = text.indexOf("\n", caret);
     const lineEnd = nextNL === -1 ? text.length : nextNL;
+
     return text.slice(lineStart, lineEnd).trim();
   };
 
   const buildPrompt = (basis) => {
-    let p = `Teksti analysoitavaksi:\n"${basis}"\n\n`;
+    let p =
+      `Analysoi annettu teksti ja tee hyvin lyhyitä ehdotuksia, ` +
+      `älä selitä mitään, älä käytä otsikoita äläkä rivin alussa numeroita tai ranskalaisia viivoja.\n`;
+    p += `Teksti: ""${basis}""\n\n`;
+
     const wants = [];
-    if (wantMetaphors) wants.push("kielikuvia");
-    if (wantSynonyms) wants.push("synonyymejä");
-    if (wantRhymes) wants.push("riimiehdotuksia");
+    if (wantMetaphors) wants.push("kielikuvia (metaforia, vertauskuvia)");
+    if (wantSynonyms) wants.push("synonyymejä ja vaihtoehtoisia ilmauksia");
+    if (wantRhymes) wants.push("riimiehdotuksia ja loppusointivariaatioita");
+
     if (wants.length) p += `Sisällytä: ${wants.join(", ")}.\n`;
     if (freeform.trim()) p += `Lisäohje: ${freeform.trim()}\n`;
+
+    p += `\nPalauta 1–4 kohtaa, yksi per rivi, ilman selittävää esipuhetta.\n`;
     return p;
   };
 
@@ -134,6 +160,7 @@ export default function App() {
     const basis = getSelectionOrCurrentLine();
     setPromptPreview(buildPrompt(basis || "<ei valintaa / kursoririvi tyhjä>"));
   };
+
   useEffect(() => {
     refreshPromptPreview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -152,74 +179,51 @@ export default function App() {
       const r = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, temperature: clamp01(wildness) }),
+        body: JSON.stringify({
+          prompt,
+          temperature: clamp01(wildness),
+        }),
       });
-      if (!r.ok) throw new Error(`API-virhe ${r.status}: ${await r.text()}`);
+      if (!r.ok) {
+        const t = await r.text();
+        throw new Error(`API-virhe ${r.status}: ${t}`);
+      }
       const data = await r.json();
       const content = (data?.content || "").trim();
       if (!content) throw new Error("Tyhjä vastaus.");
+      const stamp = new Date().toLocaleString();
+      //setRenkiText((prev) => prev + `--- Ehdotukset (${stamp}) ---\n${content}\n\n`);
       setRenkiText((prev) => prev + `---------------\n${content}\n`);
     } catch (e) {
       setError(e.message || String(e));
     } finally {
       setLoading(false);
-      refreshPromptPreview();
+      refreshPromptPreview(); // pitää esikatselun synkassa
     }
   };
-
-  // --- Korkeuden laskenta: kun asetukset PIILOSSA, säädetään paneelialue kiinteään korkeuteen ---
-  const headerRef = useRef(null);
-  const toolbarRef = useRef(null);
-  const footerRef = useRef(null);
-  const [paneAreaHeight, setPaneAreaHeight] = useState(null);
-
-  const recalcPaneHeight = () => {
-    if (showSettings) {
-      setPaneAreaHeight(null); // rullaa vapaasti kun asetukset näkyvissä
-      return;
-    }
-    const vh = window.innerHeight || document.documentElement.clientHeight;
-    const hdr = headerRef.current?.getBoundingClientRect()?.height || 0;
-    const tlb = toolbarRef.current?.getBoundingClientRect()?.height || 0;
-    const ftr = footerRef.current?.getBoundingClientRect()?.height || 0;
-
-    // Sivun sisäiset pystymarginit/paddingit (~32 px) + grid-gap (~12 px) + pieni turvamarginaali
-    const chrome = 32 + 12 + 8;
-    const h = Math.max(220, Math.floor(vh - hdr - tlb - ftr - chrome));
-    setPaneAreaHeight(h);
-  };
-
-  useEffect(() => {
-    recalcPaneHeight();
-    const onResize = () => recalcPaneHeight();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showSettings, isWide]);
 
   // --- Render ---
   return (
     <div style={pageWrap}>
       {/* Sticky header */}
-      <header ref={headerRef} style={headerWrap}>
-        <div style={headerInner}>
-          {/* OTSAKE + VERSIO SAMALLA RIVILLÄ */}
-          <div style={titleRow}>
-            <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.6</div>
-          </div>
+<header style={headerWrap}>
+  <div style={headerInner}>
+    {/* OTSAKE + VERSIO SAMALLA RIVILLÄ */}
+    <div style={titleRow}>
+      <div style={titleStyle}>Lyriikkarenki</div>
+      <div style={versionInline}>v0.5</div>
+    </div>
 
-          <button
-            onClick={() => setShowSettings((s) => !s)}
-            title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
-            style={iconButtonStyle}
-            aria-label="Asetukset"
-          >
-            ⚙
-          </button>
-        </div>
-      </header>
-
+    <button
+      onClick={() => setShowSettings((s) => !s)}
+      title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
+      style={iconButtonStyle}
+      aria-label="Asetukset"
+    >
+      ⚙
+    </button>
+  </div>
+</header>
       {/* Settings card */}
       {showSettings && (
         <section style={card}>
@@ -279,7 +283,10 @@ export default function App() {
                 rows={8}
                 style={{ ...textareaStyle, minHeight: 0, height: "auto", background: "#fcfcff" }}
               />
-            </div>
+{/*               <div style={{ color: "#6b7280", fontSize: 12, marginTop: 6 }}>
+                Vinkki: **Ctrl+Alt+D** piilottaa/näyttää kehittäjätilan. Tila tallentuu localStorageen (lr_dev).
+              </div>
+ */}            </div>
           )}
 
           <div style={{ marginTop: 12 }}>
@@ -326,7 +333,7 @@ export default function App() {
       )}
 
       {/* ALWAYS-VISIBLE ACTION BAR */}
-      <section ref={toolbarRef} style={toolbarCard}>
+      <section style={toolbarCard}>
         <button onClick={askSuggestions} disabled={loading} style={primaryBtn}>
           {loading ? "Haetaan..." : "Ehdota"}
         </button>
@@ -335,16 +342,10 @@ export default function App() {
         </span>
       </section>
 
-      {/* Two panes — kun asetukset piilossa, rajataan korkeus ja venytetään textareat */}
-      <section
-        style={{
-          ...layoutCols,
-          height: showSettings ? "auto" : paneAreaHeight ?? "auto",
-          overflow: "hidden",
-        }}
-      >
-        <div style={paneCardFlex}>
-          <label style={paneTitle}>Sanoitus</label>
+      {/* Two panes */}
+      <section style={layoutStyle}>
+        <div style={paneCard}>
+          <label style={paneTitle}>Sanoittajan ikkuna</label>
           <textarea
             ref={authorRef}
             value={authorText}
@@ -352,28 +353,30 @@ export default function App() {
               setAuthorTextWithHistory(e.target.value);
               bumpSel();
             }}
-            onSelect={bumpSel}
-            onKeyUp={bumpSel}
-            onMouseUp={bumpSel}
+            onSelect={bumpSel}  // valinnan muutokset
+            onKeyUp={bumpSel}   // kursorin siirrot nuolilla
+            onMouseUp={bumpSel} // klikkaus eri kohtaan
             onFocus={bumpSel}
             onBlur={bumpSel}
             placeholder="Kirjoita tai liitä sanoitus tähän..."
-            style={textareaFill}
+            rows={20}
+            style={textareaStyle}
           />
         </div>
 
-        <div style={paneCardFlex}>
+        <div style={paneCard}>
           <label style={paneTitle}>Ehdotukset</label>
           <textarea
             value={renkiText}
             readOnly
             placeholder="Tähän kertyy kielikuvia, riimejä ja synonyymejä..."
-            style={{ ...textareaFill, background: "#f7f7f7" }}
+            rows={20}
+            style={{ ...textareaStyle, background: "#f7f7f7" }}
           />
         </div>
       </section>
 
-      <footer ref={footerRef} style={{ textAlign: "center", color: "#9ca3af", fontSize: 12, padding: "16px 0" }}>
+      <footer style={{ textAlign: "center", color: "#9ca3af", fontSize: 12, padding: "16px 0" }}>
         © {new Date().getFullYear()} Lyriikkarenki
       </footer>
     </div>
@@ -467,13 +470,6 @@ const paneCard = {
   boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
 };
 
-const paneCardFlex = {
-  ...paneCard,
-  display: "flex",
-  flexDirection: "column",
-  minHeight: 0, // tärkeä, jotta lapsi (textarea) saa kutistua
-};
-
 const paneTitle = { fontWeight: 600, display: "block", marginBottom: 6 };
 
 const textareaStyle = {
@@ -488,14 +484,6 @@ const textareaStyle = {
   fontFamily:
     "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   lineHeight: 1.4,
-};
-
-// Täysin tilan täyttävä textarea paneelissa (ei minHeight-pakkoa)
-const textareaFill = {
-  ...textareaStyle,
-  flex: 1,
-  minHeight: 0,
-  resize: "none", // ettei kasva yli varatun korkeuden; vaihda "vertical" jos haluat manuaalisen venytyksen
 };
 
 const checkStyle = { userSelect: "none" };
@@ -539,7 +527,7 @@ const devBadge = {
 
 const titleRow = {
   display: "flex",
-  alignItems: "baseline",
+  alignItems: "baseline",   // versio asettuu otsikon alaviivalle
   gap: 8,
   textAlign: "center",
 };
@@ -557,3 +545,4 @@ const versionInline = {
   color: "#6b7280",
   lineHeight: 1,
 };
+

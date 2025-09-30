@@ -1,15 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.2
- * - Pieni, keskitetty otsikko + versio
- * - Asetukset-paneeli (hammasratas)
- * - Valinnat: kielikuvia, synonyymejä, riimiehdotuksia
- * - Vapaamuotoinen ohje (3 riviä) — oma pienempi tyyli
- * - Villiyden liukusäädin (0.0–1.0)
- * - Ehdota-painike näkyy AINA paneelien yläpuolella (ei asetuksissa)
- * - Sanoittajan ikkuna (muokattava) + Rengin ikkuna (readOnly)
- * - Peru / Uudelleen -historia sanoittajan tekstille
+ * Lyriikkarenki – v0.5+ (paneelit mahtuvat pystyyn kun asetukset piilossa)
  */
 
 export default function App() {
@@ -18,6 +10,22 @@ export default function App() {
     const saved = localStorage.getItem("lr_showSettings");
     return saved ? saved === "true" : true;
   });
+
+  // --- Kehittäjätila (backdoor) ---
+  const initialDev =
+    new URLSearchParams(window.location.search).get("dev") === "1" ||
+    localStorage.getItem("lr_dev") === "true";
+  const [devMode, setDevMode] = useState(initialDev);
+  useEffect(() => localStorage.setItem("lr_dev", String(devMode)), [devMode]);
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.ctrlKey && e.altKey && (e.key === "d" || e.key === "D")) {
+        setDevMode((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // --- Valinnat (persist) ---
   const [wantMetaphors, setWantMetaphors] = useState(() => lsBool("lr_metaphors", true));
@@ -76,51 +84,65 @@ export default function App() {
   // --- Ref ---
   const authorRef = useRef(null);
 
-  // --- Layout ---
+  // --- Layout (responsiivinen sarake/rinnakkain) ---
   const isWide = useMediaQuery("(min-width: 900px)");
-  const layoutStyle = useMemo(
+  const layoutCols = useMemo(
     () => ({
       display: "grid",
       gridTemplateColumns: isWide ? "1fr 1fr" : "1fr",
       gap: 12,
+      alignItems: "stretch",
     }),
     [isWide]
   );
 
   // --- Promptin muodostus ---
-  const getSelectionOrLastLine = () => {
+  // Valinnan/kursorin “tikkeri” -> pakottaa esikatselun päivityksen
+  const [selTick, setSelTick] = useState(0);
+  const bumpSel = () => setSelTick((t) => t + 1);
+
+  const getSelectionOrCurrentLine = () => {
     const el = authorRef.current;
     if (!el) return "";
     const start = el.selectionStart ?? 0;
     const end = el.selectionEnd ?? 0;
     if (start !== end) return authorText.slice(start, end).trim();
 
-    // viimeinen rivi ennen kursoria
-    const before = authorText.slice(0, start);
-    const lines = before.split("\n");
-    return (lines[lines.length - 1] || "").trim();
+    const text = authorText;
+    const caret = start;
+    const lineStart = text.lastIndexOf("\n", Math.max(0, caret - 1)) + 1;
+    const nextNL = text.indexOf("\n", caret);
+    const lineEnd = nextNL === -1 ? text.length : nextNL;
+    return text.slice(lineStart, lineEnd).trim();
   };
 
   const buildPrompt = (basis) => {
-    let p = `Analysoi annettu teksti ja tee suomeksi napakoita ehdotuksia.\n`;
-    p += `Teksti: """${basis}"""\n\n`;
-
+    let p = `Teksti analysoitavaksi:\n"${basis}"\n\n`;
     const wants = [];
-    if (wantMetaphors) wants.push("kielikuvia (metaforia, vertauskuvia)");
-    if (wantSynonyms) wants.push("synonyymejä ja vaihtoehtoisia ilmauksia");
-    if (wantRhymes) wants.push("riimiehdotuksia ja loppusointivariaatioita");
-
+    if (wantMetaphors) wants.push("kielikuvia");
+    if (wantSynonyms) wants.push("synonyymejä");
+    if (wantRhymes) wants.push("riimiehdotuksia");
     if (wants.length) p += `Sisällytä: ${wants.join(", ")}.\n`;
     if (freeform.trim()) p += `Lisäohje: ${freeform.trim()}\n`;
-
-    p += `\nPalauta 1–8 kohtaa, yksi per rivi, ilman selittävää esipuhetta.\n`;
     return p;
   };
 
+  // Kehittäjätilan prompt-esikatselu
+  const [promptPreview, setPromptPreview] = useState("");
+  const refreshPromptPreview = () => {
+    if (!devMode) return;
+    const basis = getSelectionOrCurrentLine();
+    setPromptPreview(buildPrompt(basis || "<ei valintaa / kursoririvi tyhjä>"));
+  };
+  useEffect(() => {
+    refreshPromptPreview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [devMode, authorText, wantMetaphors, wantSynonyms, wantRhymes, wildness, freeform, selTick]);
+
   const askSuggestions = async () => {
-    const basis = getSelectionOrLastLine();
+    const basis = getSelectionOrCurrentLine();
     if (!basis) {
-      setError("Valitse tekstiä tai kirjoita rivi, josta haluat ehdotuksia.");
+      setError("Valitse tekstiä tai siirrä kursori riville, josta haluat ehdotuksia.");
       return;
     }
     setError("");
@@ -130,37 +152,63 @@ export default function App() {
       const r = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt,
-          temperature: clamp01(wildness),
-        }),
+        body: JSON.stringify({ prompt, temperature: clamp01(wildness) }),
       });
-      if (!r.ok) {
-        const t = await r.text();
-        throw new Error(`API-virhe ${r.status}: ${t}`);
-      }
+      if (!r.ok) throw new Error(`API-virhe ${r.status}: ${await r.text()}`);
       const data = await r.json();
       const content = (data?.content || "").trim();
       if (!content) throw new Error("Tyhjä vastaus.");
-      const stamp = new Date().toLocaleString();
-      setRenkiText((prev) => prev + `--- Ehdotukset (${stamp}) ---\n${content}\n\n`);
+      setRenkiText((prev) => prev + `---------------\n${content}\n`);
     } catch (e) {
       setError(e.message || String(e));
     } finally {
       setLoading(false);
+      refreshPromptPreview();
     }
   };
+
+  // --- Korkeuden laskenta: kun asetukset PIILOSSA, säädetään paneelialue kiinteään korkeuteen ---
+  const headerRef = useRef(null);
+  const toolbarRef = useRef(null);
+  const footerRef = useRef(null);
+  const [paneAreaHeight, setPaneAreaHeight] = useState(null);
+
+  const recalcPaneHeight = () => {
+    if (showSettings) {
+      setPaneAreaHeight(null); // rullaa vapaasti kun asetukset näkyvissä
+      return;
+    }
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    const hdr = headerRef.current?.getBoundingClientRect()?.height || 0;
+    const tlb = toolbarRef.current?.getBoundingClientRect()?.height || 0;
+    const ftr = footerRef.current?.getBoundingClientRect()?.height || 0;
+
+    // Sivun sisäiset pystymarginit/paddingit (~32 px) + grid-gap (~12 px) + pieni turvamarginaali
+    const chrome = 32 + 12 + 8;
+    const h = Math.max(220, Math.floor(vh - hdr - tlb - ftr - chrome));
+    setPaneAreaHeight(h);
+  };
+
+  useEffect(() => {
+    recalcPaneHeight();
+    const onResize = () => recalcPaneHeight();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSettings, isWide]);
 
   // --- Render ---
   return (
     <div style={pageWrap}>
       {/* Sticky header */}
-      <header style={headerWrap}>
+      <header ref={headerRef} style={headerWrap}>
         <div style={headerInner}>
-          <div style={{ textAlign: "center" }}>
+          {/* OTSAKE + VERSIO SAMALLA RIVILLÄ */}
+          <div style={titleRow}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionStyle}>v0.2</div>
+            <div style={versionInline}>v0.5</div>
           </div>
+
           <button
             onClick={() => setShowSettings((s) => !s)}
             title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
@@ -211,9 +259,28 @@ export default function App() {
               onChange={(e) => setFreeform(e.target.value)}
               rows={3}
               placeholder="Esim. 'sävy melankolinen', 'vältä anglismeja', '8 tavua / rivi'..."
-              style={smallTextareaStyle}  // 3 riviä, ei minHeight-pakkoa
+              style={{ ...textareaStyle, minHeight: 0, height: "auto" }}
             />
           </div>
+
+          {/* Kehittäjätilan prompt-esikatselu */}
+          {devMode && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <span style={devBadge}>DEV</span>
+                <strong>AI-prompt (esikatselu)</strong>
+                <span style={{ color: "#6b7280", fontSize: 12 }}>
+                  (päivittyy valinnan/kurssorin ja asetusten mukaan)
+                </span>
+              </div>
+              <textarea
+                readOnly
+                value={promptPreview}
+                rows={8}
+                style={{ ...textareaStyle, minHeight: 0, height: "auto", background: "#fcfcff" }}
+              />
+            </div>
+          )}
 
           <div style={{ marginTop: 12 }}>
             <label style={{ fontWeight: 600 }}>
@@ -232,21 +299,25 @@ export default function App() {
           </div>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-            {/* HUOM: Ehdota-painike EI ole enää asetuksissa */}
-            <button onClick={() => { setAuthorText(""); setHistory([""]); setHistIndex(0); }} style={btnStyle}>
-              tyhjennä sanoittajan ikkuna
+            <button
+              onClick={() => {
+                setAuthorText("");
+                setHistory([""]);
+                setHistIndex(0);
+                bumpSel();
+              }}
+              style={btnStyle}
+            >
+              tyhjennä sanoitus
             </button>
             <button onClick={undo} disabled={!canUndo} style={btnStyle}>
-              peru muutos (sanoittajan ikkunassa)
+              peru (Ctrl+Z)
             </button>
             <button onClick={redo} disabled={!canRedo} style={btnStyle}>
-              tee muutos uudelleen (sanoittajan ikkunassa)
+              tee uudelleen (Ctrl+Y)
             </button>
             <button onClick={() => setRenkiText("")} style={btnStyle}>
-              tyhjennä rengin ikkuna
-            </button>
-            <button onClick={() => setShowSettings(false)} style={btnStyle}>
-              piilota asetukset
+              tyhjennä ehdotukset
             </button>
           </div>
 
@@ -255,42 +326,54 @@ export default function App() {
       )}
 
       {/* ALWAYS-VISIBLE ACTION BAR */}
-      <section style={toolbarCard}>
+      <section ref={toolbarRef} style={toolbarCard}>
         <button onClick={askSuggestions} disabled={loading} style={primaryBtn}>
           {loading ? "Haetaan..." : "Ehdota"}
         </button>
         <span style={{ color: "#6b7280", fontSize: 12 }}>
-          Vihje: valitse tekstiä tai jätä valitsematta — käytämme viimeistä riviä.
+          Vihje: Käytetään valittua tekstiä tai jos mitään ei ole valittu, niin käytetään kursorin riviä.
         </span>
       </section>
 
-      {/* Two panes */}
-      <section style={layoutStyle}>
-        <div style={paneCard}>
-          <label style={paneTitle}>Sanoittajan ikkuna</label>
+      {/* Two panes — kun asetukset piilossa, rajataan korkeus ja venytetään textareat */}
+      <section
+        style={{
+          ...layoutCols,
+          height: showSettings ? "auto" : paneAreaHeight ?? "auto",
+          overflow: "hidden",
+        }}
+      >
+        <div style={paneCardFlex}>
+          <label style={paneTitle}>Sanoitus</label>
           <textarea
             ref={authorRef}
             value={authorText}
-            onChange={(e) => setAuthorTextWithHistory(e.target.value)}
+            onChange={(e) => {
+              setAuthorTextWithHistory(e.target.value);
+              bumpSel();
+            }}
+            onSelect={bumpSel}
+            onKeyUp={bumpSel}
+            onMouseUp={bumpSel}
+            onFocus={bumpSel}
+            onBlur={bumpSel}
             placeholder="Kirjoita tai liitä sanoitus tähän..."
-            rows={20}
-            style={textareaStyle}
+            style={textareaFill}
           />
         </div>
 
-        <div style={paneCard}>
-          <label style={paneTitle}>Rengin ikkuna</label>
+        <div style={paneCardFlex}>
+          <label style={paneTitle}>Ehdotukset</label>
           <textarea
             value={renkiText}
             readOnly
             placeholder="Tähän kertyy kielikuvia, riimejä ja synonyymejä..."
-            rows={20}
-            style={{ ...textareaStyle, background: "#f7f7f7" }}
+            style={{ ...textareaFill, background: "#f7f7f7" }}
           />
         </div>
       </section>
 
-      <footer style={{ textAlign: "center", color: "#9ca3af", fontSize: 12, padding: "16px 0" }}>
+      <footer ref={footerRef} style={{ textAlign: "center", color: "#9ca3af", fontSize: 12, padding: "16px 0" }}>
         © {new Date().getFullYear()} Lyriikkarenki
       </footer>
     </div>
@@ -348,17 +431,8 @@ const headerInner = {
   padding: "10px 0",
 };
 
-const titleStyle = {
-  fontSize: 18,
-  fontWeight: 800,
-  letterSpacing: 0.2,
-  margin: 0,
-  lineHeight: 1.05,
-  textAlign: "center",
-};
-
 const versionStyle = {
-  fontSize: 11,
+  fontSize: 12,
   color: "#6b7280",
   marginTop: 2,
   textAlign: "center",
@@ -393,6 +467,13 @@ const paneCard = {
   boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
 };
 
+const paneCardFlex = {
+  ...paneCard,
+  display: "flex",
+  flexDirection: "column",
+  minHeight: 0, // tärkeä, jotta lapsi (textarea) saa kutistua
+};
+
 const paneTitle = { fontWeight: 600, display: "block", marginBottom: 6 };
 
 const textareaStyle = {
@@ -409,10 +490,12 @@ const textareaStyle = {
   lineHeight: 1.4,
 };
 
-const smallTextareaStyle = {
+// Täysin tilan täyttävä textarea paneelissa (ei minHeight-pakkoa)
+const textareaFill = {
   ...textareaStyle,
-  minHeight: 0,   // näin rows=3 määrää korkeuden
-  height: "auto",
+  flex: 1,
+  minHeight: 0,
+  resize: "none", // ettei kasva yli varatun korkeuden; vaihda "vertical" jos haluat manuaalisen venytyksen
 };
 
 const checkStyle = { userSelect: "none" };
@@ -442,4 +525,35 @@ const iconButtonStyle = {
   placeItems: "center",
   position: "absolute",
   right: 16,
+};
+
+const devBadge = {
+  display: "inline-block",
+  padding: "1px 6px",
+  borderRadius: 6,
+  fontSize: 11,
+  background: "#eef2ff",
+  color: "#3730a3",
+  border: "1px solid #c7d2fe",
+};
+
+const titleRow = {
+  display: "flex",
+  alignItems: "baseline",
+  gap: 8,
+  textAlign: "center",
+};
+
+const titleStyle = {
+  fontSize: 20,
+  fontWeight: 800,
+  letterSpacing: 0.2,
+  margin: 0,
+  lineHeight: 1.05,
+};
+
+const versionInline = {
+  fontSize: 12,
+  color: "#6b7280",
+  lineHeight: 1,
 };

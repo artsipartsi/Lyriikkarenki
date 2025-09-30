@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     const payload = {
       model: "gpt-4o",
       messages: [
-        { role: "system", content: "Olet runonlaulun asiantuntija, joka säilyttää rakenteen tarkasti." },
+        { role: "system", content: "Analysoi annettu teksti ja tee hyvin lyhyitä ehdotuksia. Älä selitä mitään. Älä käytä otsikoita. Älä käytä rivin alussa numeroita tai ranskalaisia viivoja. Palauta 1–4 ehdotusta, ilman esipuhetta." },
         { role: "user", content: prompt }
       ],
       temperature: Math.max(0, Math.min(1, Number(temperature) || 0.7))
