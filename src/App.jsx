@@ -274,7 +274,7 @@ export default function App() {
               onChange={(e) => setFreeform(e.target.value)}
               rows={3}
               placeholder="Esim. 'sävy melankolinen', 'vältä anglismeja', '8 tavua / rivi'..."
-              style={{ ...textareaStyle, minHeight: 0, height: "auto" }}
+              style={{ ...baseTextarea, minHeight: 0, height: "auto" }}
             />
           </div>
 
@@ -292,7 +292,7 @@ export default function App() {
                 readOnly
                 value={promptPreview}
                 rows={8}
-                style={{ ...textareaStyle, minHeight: 0, height: "auto", background: "#fcfcff" }}
+                style={{ ...baseTextarea, minHeight: 0, height: "auto", background: "#fcfcff" }}
               />
             </div>
           )}
