@@ -221,17 +221,22 @@ export default function App() {
         <div style={headerInner}>
           <div style={titleRow}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.8</div>
+            <div style={versionInline}>v0.9</div>
           </div>
 
-          <button
-            onClick={() => setShowSettings((s) => !s)}
-            title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
-            style={iconButtonStyle}
-            aria-label="Asetukset"
-          >
-            ⚙
-          </button>
+<button
+  onClick={() => setShowSettings((s) => !s)}
+  title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
+  style={iconButtonStyle}
+  aria-label="Asetukset"
+>
+  {/* kevyt, selkeä gear-SVG */}
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+       strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 5 15a1.65 1.65 0 0 0-1.51-1H3.4a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 5 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.44 3.3l.06.06c.47.47 1.16.61 1.82.33A1.65 1.65 0 0 0 11 2.18V2a2 2 0 1 1 4 0v.18c0 .67.39 1.28 1 1.51.66.28 1.35.14 1.82-.33l.06-.06A2 2 0 1 1 22 7.12l-.06.06c-.47.47-.61 1.16-.33 1.82.23.61.84 1 1.51 1H23a2 2 0 1 1 0 4h-.18c-.67 0-1.28.39-1.51 1Z"/>
+  </svg>
+</button>
         </div>
       </header>
 
@@ -444,6 +449,7 @@ const headerInner = {
   justifyContent: "center",
   gap: 12,
   padding: "10px 0",
+  position: "relative",
 };
 
 const card = {
@@ -521,16 +527,25 @@ const primaryBtn = {
   borderColor: "#111827",
 };
 const iconButtonStyle = {
-  ...btnStyle,
-  width: 36,
-  height: 36,
-  borderRadius: 10,
-  fontSize: 22,
-  lineHeight: "22px",
-  display: "grid",
-  placeItems: "center",
+  width: 40,
+  height: 40,
+  borderRadius: 12,
+  border: "2px solid #111827",
+  background: "white",
+  color: "#111827",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+
+  // sijoitus headeriin
   position: "absolute",
   right: 16,
+  top: "50%",
+  transform: "translateY(-50%)",
+
+  // pikku viimeistelyt
+  boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
 };
 
 const devBadge = {
