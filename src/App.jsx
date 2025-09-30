@@ -222,24 +222,17 @@ export default function App() {
     <div /> {/* vasen täytesarake */}
     <div style={titleRow}>
       <div style={titleStyle}>Lyriikkarenki</div>
-      <div style={versionInline}>v0.11</div>
+      <div style={versionInline}>v0.12</div>
     </div>
     <button
-      onClick={() => setShowSettings((s) => !s)}
-      title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
-      style={gearBtn}
-      aria-label="Asetukset"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20" height="20" viewBox="0 0 24 24"
-        fill="none" stroke="currentColor" strokeWidth="2"
-        strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
-      >
-        <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 5 15a1.65 1.65 0 0 0-1.51-1H3.4a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 5 8a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.44 3.3l.06.06c.47.47 1.16.61 1.82.33A1.65 1.65 0 0 0 11 2.18V2a2 2 0 1 1 4 0v.18c0 .67.39 1.28 1 1.51.66.28 1.35.14 1.82-.33l.06-.06A2 2 0 1 1 22 7.12l-.06.06c-.47.47-.61 1.16-.33 1.82.23.61.84 1 1.51 1H23a2 2 0 1 1 0 4h-.18c-.67 0-1.28.39-1.51 1Z"/>
-      </svg>
-    </button>
+  onClick={() => setShowSettings((s) => !s)}
+  title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
+  style={gearBtn}
+  aria-label="Asetukset"
+>
+  <span style={gearGlyph}>⚙</span>
+</button>
+
   </div>
 </header>
       {/* Settings card */}
@@ -532,14 +525,19 @@ const gearBtn = {
   borderRadius: 12,
   border: "2px solid #111827",
   background: "white",
-  color: "#111827",         // SVG käyttää currentColor
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
+  color: "#111827",
+  display: "grid",
+  placeItems: "center",   // täysi keskitys
   cursor: "pointer",
   boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
 };
-const devBadge = {
+
+const gearGlyph = {
+  fontSize: 20,
+  lineHeight: 1,
+  display: "block",
+  transform: "translateY(1px)", // optinen keskitys (voi poistaa)
+};const devBadge = {
   display: "inline-block",
   padding: "1px 6px",
   borderRadius: 6,
