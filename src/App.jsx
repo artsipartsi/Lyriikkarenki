@@ -217,7 +217,7 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.1</div>
+            <div style={versionInline}>v0.2</div>
           </div>
 
           <button
@@ -413,7 +413,9 @@ const pageWrap = {
   fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
   background: "linear-gradient(180deg,#fafafa, #ffffff)",
   minHeight: "100vh",
-  padding: "0 16px",
+  padding: 0,             // ennen: "0 16px"
+  width: "100vw",         // täysi näkymäleveys
+  overflowX: "hidden",    // ettei tule vaakarullaa marginaalien takia
 };
 
 const headerWrap = {
@@ -426,22 +428,22 @@ const headerWrap = {
 };
 
 const headerInner = {
-  width: "100%",           // täysleveä
+  width: "100%",
   maxWidth: "none",
   margin: "0",
   display: "grid",
-  gridTemplateColumns: "40px 1fr 40px", // vasen täyte, keskellä otsikko, oikealla gear
+  gridTemplateColumns: "40px 1fr 40px",
   alignItems: "center",
-  padding: "10px 12px",
+  padding: "10px 12px",   // pieni hengitysvara reunoihin
 };
 
 const card = {
-  width: "100%",           // täysleveä
+  width: "100%",
   maxWidth: "none",
   margin: "12px 0",
   background: "white",
   border: "1px solid #eee",
-  borderRadius: 12,
+  borderRadius: 0,        // ennen: 12 — nyt kortti “bleedaa” reunoihin
   padding: 14,
   boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
 };
