@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.12 (keskitetty otsake, kehyksetön gear)
+ * Lyriikkarenki – v0.7+ (paneelien min 5 riviä, älykäs korkeus)
  */
 
 export default function App() {
@@ -172,28 +172,37 @@ export default function App() {
   const footerRef = useRef(null);
   const [paneAreaHeight, setPaneAreaHeight] = useState(null);
 
+  // Minimit, jotta tekstialue on aina ≥ 5 riviä
   const MIN_ROWS = 5;
-  const ROW_PX = 22;
-  const TEXTAREA_EXTRA = 24;
-  const PANEL_EXTRA = 56;
-  const MIN_TEXTAREA_PX = MIN_ROWS * ROW_PX + TEXTAREA_EXTRA;
-  const MIN_PANEL_PX = MIN_TEXTAREA_PX + PANEL_EXTRA;
+  const ROW_PX = 22;               // arvio monospace-rivistä (font 16px, line-height ~1.4)
+  const TEXTAREA_EXTRA = 24;       // textarea padding + border (ylä+ala)
+  const PANEL_EXTRA = 56;          // paneelin padding + otsikkorivin korkeus + marginaali
+  const MIN_TEXTAREA_PX = MIN_ROWS * ROW_PX + TEXTAREA_EXTRA; // ≈ 134 px
+  const MIN_PANEL_PX = MIN_TEXTAREA_PX + PANEL_EXTRA;         // ≈ 190 px
 
   const recalcPaneHeight = () => {
     if (showSettings) {
-      setPaneAreaHeight(null);
+      setPaneAreaHeight(null); // rullaa vapaasti kun asetukset näkyvissä
       return;
     }
     const vh = window.innerHeight || document.documentElement.clientHeight;
     const hdr = headerRef.current?.getBoundingClientRect()?.height || 0;
     const tlb = toolbarRef.current?.getBoundingClientRect()?.height || 0;
     const ftr = footerRef.current?.getBoundingClientRect()?.height || 0;
+
+    // Sivun sisäiset pystymarginit/paddingit (~32 px) + grid-gap (~12 px) + pieni turvamarginaali
     const chrome = 32 + 12 + 8;
     const available = Math.floor(vh - hdr - tlb - ftr - chrome);
+
+    // Kuinka paljon MINIMIÄ tarvitaan: leveällä 1 paneeli korkeus, kapealla 2 paneelia + väli
     const needMin = isWide ? MIN_PANEL_PX : MIN_PANEL_PX * 2 + 12;
 
-    if (available < needMin) setPaneAreaHeight(null);
-    else setPaneAreaHeight(available);
+    if (available < needMin) {
+      // Ei riitä täyspitkään lukitukseen → anna sivun rullata
+      setPaneAreaHeight(null);
+    } else {
+      setPaneAreaHeight(available);
+    }
   };
 
   useEffect(() => {
@@ -208,26 +217,24 @@ export default function App() {
   return (
     <div style={pageWrap}>
       {/* Sticky header */}
-      <header ref={headerRef} style={headerWrap}>
-        <div style={headerInner}>
-          <div /> {/* vasen täytesarake 40px */}
+<header style={headerWrap}>
+  <div style={headerInner}>
+    <div /> {/* vasen täytesarake */}
+    <div style={titleRow}>
+      <div style={titleStyle}>Lyriikkarenki</div>
+      <div style={versionInline}>v0.12</div>
+    </div>
+    <button
+  onClick={() => setShowSettings((s) => !s)}
+  title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
+  style={gearBtn}
+  aria-label="Asetukset"
+>
+  <span style={gearGlyph}>⚙</span>
+</button>
 
-          <div style={titleRowCentered}>
-            <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.13</div>
-          </div>
-
-          <button
-            onClick={() => setShowSettings((s) => !s)}
-            title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
-            style={gearBtn}
-            aria-label="Asetukset"
-          >
-            <span style={gearGlyph}>⚙</span>
-          </button>
-        </div>
-      </header>
-
+  </div>
+</header>
       {/* Settings card */}
       {showSettings && (
         <section style={card}>
@@ -271,6 +278,7 @@ export default function App() {
             />
           </div>
 
+          {/* Kehittäjätilan prompt-esikatselu */}
           {devMode && (
             <div style={{ marginTop: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
@@ -342,7 +350,7 @@ export default function App() {
         </span>
       </section>
 
-      {/* Two panes */}
+      {/* Two panes — kun asetukset piilossa, rajataan korkeus vain jos riittää minimeihin */}
       <section
         style={{
           ...layoutCols,
@@ -432,7 +440,7 @@ const headerInner = {
   maxWidth: 1200,
   margin: "0 auto",
   display: "grid",
-  gridTemplateColumns: "40px 1fr 40px", // symmetrinen: vasen täyte, keskellä otsikko, oikealla gear
+  gridTemplateColumns: "1fr auto 40px", // vasen täyte, keskellä otsikko, oikealla nappi
   alignItems: "center",
   padding: "10px 0",
 };
@@ -470,14 +478,14 @@ const paneCardFlex = {
   ...paneCard,
   display: "flex",
   flexDirection: "column",
-  minHeight: 0,
+  minHeight: 0, // jotta textarea saa kutistua
 };
 
 const paneTitle = { fontWeight: 600, display: "block", marginBottom: 6 };
 
 const baseTextarea = {
   width: "100%",
-  resize: "none",
+  resize: "none", // ei venytystä yli varatun tilan
   padding: "10px 12px",
   borderRadius: 8,
   border: "1px solid #ddd",
@@ -488,10 +496,11 @@ const baseTextarea = {
   lineHeight: 1.4,
 };
 
+// Palauttaa style-objektin, jossa minHeight varmistaa >= 5 riviä
 const textareaFill = (minPx) => ({
   ...baseTextarea,
   flex: 1,
-  minHeight: minPx,
+  minHeight: minPx, // takaa vähintään ~5 riviä
 });
 
 const checkStyle = { userSelect: "none" };
@@ -510,25 +519,25 @@ const primaryBtn = {
   color: "white",
   borderColor: "#111827",
 };
-
 const gearBtn = {
   width: 40,
   height: 40,
-  border: "none",          // ei kehyksiä
-  background: "transparent",
+  borderRadius: 12,
+  border: "2px solid #111827",
+  background: "white",
   color: "#111827",
   display: "grid",
-  placeItems: "center",
+  placeItems: "center",   // täysi keskitys
   cursor: "pointer",
+  boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
 };
 
 const gearGlyph = {
   fontSize: 20,
   lineHeight: 1,
   display: "block",
-};
-
-const devBadge = {
+  transform: "translateY(1px)", // optinen keskitys (voi poistaa)
+};const devBadge = {
   display: "inline-block",
   padding: "1px 6px",
   borderRadius: 6,
@@ -538,12 +547,10 @@ const devBadge = {
   border: "1px solid #c7d2fe",
 };
 
-const titleRowCentered = {
+const titleRow = {
   display: "flex",
   alignItems: "baseline",
   gap: 8,
-  justifySelf: "center",    // keskittää solussa
-  width: "max-content",     // ettei veny solun leveyteen
   textAlign: "center",
 };
 
