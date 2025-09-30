@@ -12,9 +12,12 @@ export default function App() {
   });
 
   // --- Kehittäjätila (backdoor) ---
-  const initialDev =
-    new URLSearchParams(window.location.search).get("dev") === "1" ||
-    localStorage.getItem("lr_dev") === "true";
+const qs = new URLSearchParams(window.location.search);
+const devParam = qs.get("dev"); // "1" | "0" | null
+const initialDev =
+  devParam === "1" ? true :
+  devParam === "0" ? false :
+  localStorage.getItem("lr_dev") === "true";
   const [devMode, setDevMode] = useState(initialDev);
   useEffect(() => localStorage.setItem("lr_dev", String(devMode)), [devMode]);
   useEffect(() => {
@@ -214,7 +217,7 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.14</div>
+            <div style={versionInline}>v0.0</div>
           </div>
 
           <button
