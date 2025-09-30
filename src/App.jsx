@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.12 (keskitetty otsake, kehyksetön gear)
+ * Lyriikkarenki – v0.14 (täyskorkeus myös asetukset auki, täysleveä layout)
  */
 
 export default function App() {
@@ -12,12 +12,14 @@ export default function App() {
   });
 
   // --- Kehittäjätila (backdoor) ---
-const qs = new URLSearchParams(window.location.search);
-const devParam = qs.get("dev"); // "1" | "0" | null
-const initialDev =
-  devParam === "1" ? true :
-  devParam === "0" ? false :
-  localStorage.getItem("lr_dev") === "true";
+  const qs = new URLSearchParams(window.location.search);
+  const devParam = qs.get("dev"); // "1" | "0" | null
+  const initialDev =
+    devParam === "1"
+      ? true
+      : devParam === "0"
+      ? false
+      : localStorage.getItem("lr_dev") === "true";
   const [devMode, setDevMode] = useState(initialDev);
   useEffect(() => localStorage.setItem("lr_dev", String(devMode)), [devMode]);
   useEffect(() => {
@@ -169,8 +171,9 @@ const initialDev =
     }
   };
 
-  // --- Korkeuden laskenta ja minimit ---
+  // --- Korkeuden laskenta (aina lukittu paneelialue, myös asetukset auki) ---
   const headerRef = useRef(null);
+  const settingsRef = useRef(null);
   const toolbarRef = useRef(null);
   const footerRef = useRef(null);
   const [paneAreaHeight, setPaneAreaHeight] = useState(null);
@@ -183,20 +186,17 @@ const initialDev =
   const MIN_PANEL_PX = MIN_TEXTAREA_PX + PANEL_EXTRA;
 
   const recalcPaneHeight = () => {
-  if (showSettings) {
-    setPaneAreaHeight(null); // kun asetukset näkyvissä, sivu saa rullata vapaasti
-    return;
-  }
-  const vh  = window.innerHeight || document.documentElement.clientHeight;
-  const hdr = headerRef.current?.getBoundingClientRect()?.height || 0;
-  const tlb = toolbarRef.current?.getBoundingClientRect()?.height || 0;
-  const ftr = footerRef.current?.getBoundingClientRect()?.height || 0;
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    const hdr = headerRef.current?.getBoundingClientRect()?.height || 0;
+    const set = settingsRef.current?.getBoundingClientRect()?.height || 0; // huomioi asetuskortin korkeus
+    const tlb = toolbarRef.current?.getBoundingClientRect()?.height || 0;
+    const ftr = footerRef.current?.getBoundingClientRect()?.height || 0;
 
-  const chrome = 32 + 12 + 8; // pientä “kromi”-marginaalia
-  const available = Math.max(0, Math.floor(vh - hdr - tlb - ftr - chrome));
+    const chrome = 32 + 12 + 8; // hengitysvara & gap
+    const available = Math.max(0, Math.floor(vh - hdr - set - tlb - ftr - chrome));
 
-  // AINA aseta lukituskorkeus kun asetukset piilossa
-  setPaneAreaHeight(available);
+    // AINA aseta lukituskorkeus — myös asetukset auki
+    setPaneAreaHeight(available);
   };
 
   useEffect(() => {
@@ -221,10 +221,10 @@ const initialDev =
           </div>
 
           <button
-onClick={(e) => {
-  setShowSettings((s) => !s);
-  e.currentTarget.blur(); // poistaa focusin klikin jälkeen
-}}
+            onClick={(e) => {
+              setShowSettings((s) => !s);
+              e.currentTarget.blur(); // poista focus-kehys klikin jälkeen
+            }}
             title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
             style={gearBtn}
             aria-label="Asetukset"
@@ -236,7 +236,7 @@ onClick={(e) => {
 
       {/* Settings card */}
       {showSettings && (
-        <section style={card}>
+        <section ref={settingsRef} style={card}>
           <div style={checksRow}>
             <label style={checkStyle}>
               <input
@@ -311,29 +311,6 @@ onClick={(e) => {
             />
           </div>
 
-{/*           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
-            <button
-              onClick={() => {
-                setAuthorText("");
-                setHistory([""]);
-                setHistIndex(0);
-                bumpSel();
-              }}
-              style={btnStyle}
-            >
-              tyhjennä sanoitus
-            </button>
-            <button onClick={undo} disabled={!canUndo} style={btnStyle}>
-              peru (Ctrl+Z)
-            </button>
-            <button onClick={redo} disabled={!canRedo} style={btnStyle}>
-              tee uudelleen (Ctrl+Y)
-            </button>
-            <button onClick={() => setRenkiText("")} style={btnStyle}>
-              tyhjennä ehdotukset
-            </button>
-          </div>
- */}
           {error && <div style={{ color: "#b00020", marginTop: 8 }}>{error}</div>}
         </section>
       )}
@@ -348,12 +325,12 @@ onClick={(e) => {
         </span>
       </section>
 
-      {/* Two panes */}
+      {/* Two panes — aina lukittu korkeus (paneAreaHeight) */}
       <section
         style={{
           ...layoutCols,
-          height: showSettings ? "auto" : paneAreaHeight ?? "auto",
-          overflow: showSettings || paneAreaHeight == null ? "visible" : "hidden",
+          height: paneAreaHeight ?? "auto",
+          overflow: "hidden",
         }}
       >
         <div style={paneCardFlex}>
@@ -375,29 +352,32 @@ onClick={(e) => {
           />
         </div>
 
-<div style={paneCardFlex}>
-  <div style={paneHeaderRow}>
-    <label style={{ ...paneTitle, marginBottom: 0 }}>Ehdotukset</label>
-    <button
-      onClick={() => setRenkiText("")}
-      style={smallGhostBtn}
-      title="Tyhjennä ehdotukset"
-      aria-label="Tyhjennä ehdotukset"
-    >
-      Tyhjennä
-    </button>
-  </div>
+        <div style={paneCardFlex}>
+          <div style={paneHeaderRow}>
+            <label style={{ ...paneTitle, marginBottom: 0 }}>Ehdotukset</label>
+            <button
+              onClick={() => setRenkiText("")}
+              style={smallGhostBtn}
+              title="Tyhjennä ehdotukset"
+              aria-label="Tyhjennä ehdotukset"
+            >
+              Tyhjennä
+            </button>
+          </div>
 
-  <textarea
-    value={renkiText}
-    readOnly
-    placeholder="Tähän kertyy kielikuvia, riimejä ja synonyymejä..."
-    style={{ ...textareaFill(MIN_TEXTAREA_PX), background: "#f7f7f7" }}
-  />
-</div>
+          <textarea
+            value={renkiText}
+            readOnly
+            placeholder="Tähän kertyy kielikuvia, riimejä ja synonyymejä..."
+            style={{ ...textareaFill(MIN_TEXTAREA_PX), background: "#f7f7f7" }}
+          />
+        </div>
       </section>
 
-      <footer ref={footerRef} style={{ textAlign: "center", color: "#9ca3af", fontSize: 12, padding: "16px 0" }}>
+      <footer
+        ref={footerRef}
+        style={{ textAlign: "center", color: "#9ca3af", fontSize: 12, padding: "16px 0" }}
+      >
         © {new Date().getFullYear()} Lyriikkarenki
       </footer>
     </div>
@@ -446,17 +426,19 @@ const headerWrap = {
 };
 
 const headerInner = {
-  maxWidth: 1200,
-  margin: "0 auto",
+  width: "100%",           // täysleveä
+  maxWidth: "none",
+  margin: "0",
   display: "grid",
-  gridTemplateColumns: "40px 1fr 40px", // symmetrinen: vasen täyte, keskellä otsikko, oikealla gear
+  gridTemplateColumns: "40px 1fr 40px", // vasen täyte, keskellä otsikko, oikealla gear
   alignItems: "center",
-  padding: "10px 0",
+  padding: "10px 12px",
 };
 
 const card = {
-  maxWidth: 1200,
-  margin: "12px auto",
+  width: "100%",           // täysleveä
+  maxWidth: "none",
+  margin: "12px 0",
   background: "white",
   border: "1px solid #eee",
   borderRadius: 12,
@@ -488,7 +470,7 @@ const paneCardFlex = {
   display: "flex",
   flexDirection: "column",
   minHeight: 0,
-  height: "100%",        // <- lisäys
+  height: "100%", // venyy aina varattuun paneelialueeseen
 };
 
 const paneTitle = { fontWeight: 600, display: "block", marginBottom: 6 };
@@ -509,7 +491,7 @@ const baseTextarea = {
 const textareaFill = (minPx) => ({
   ...baseTextarea,
   flex: 1,
-  minHeight: minPx,
+  minHeight: minPx, // vähintään 5 riviä, venyy tarpeen mukaan
 });
 
 const checkStyle = { userSelect: "none" };
@@ -532,8 +514,8 @@ const primaryBtn = {
 const gearBtn = {
   width: 40,
   height: 40,
-  border: "none",          // ei kehyksiä
-  outline: "none", 
+  border: "none",         // ei kehyksiä
+  outline: "none",
   background: "transparent",
   color: "#111827",
   display: "grid",
@@ -561,8 +543,8 @@ const titleRowCentered = {
   display: "flex",
   alignItems: "baseline",
   gap: 8,
-  justifySelf: "center",    // keskittää solussa
-  width: "max-content",     // ettei veny solun leveyteen
+  justifySelf: "center", // keskittää solussa
+  width: "max-content",
   textAlign: "center",
 };
 
@@ -593,4 +575,3 @@ const smallGhostBtn = {
   background: "transparent",
   borderColor: "#e5e7eb",
 };
-
