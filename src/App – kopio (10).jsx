@@ -214,14 +214,11 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.14</div>
+            <div style={versionInline}>v0.13</div>
           </div>
 
           <button
-onClick={(e) => {
-  setShowSettings((s) => !s);
-  e.currentTarget.blur(); // poistaa focusin klikin jälkeen
-}}
+            onClick={() => setShowSettings((s) => !s)}
             title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
             style={gearBtn}
             aria-label="Asetukset"
@@ -308,7 +305,7 @@ onClick={(e) => {
             />
           </div>
 
-{/*           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
             <button
               onClick={() => {
                 setAuthorText("");
@@ -330,7 +327,7 @@ onClick={(e) => {
               tyhjennä ehdotukset
             </button>
           </div>
- */}
+
           {error && <div style={{ color: "#b00020", marginTop: 8 }}>{error}</div>}
         </section>
       )}
@@ -372,26 +369,15 @@ onClick={(e) => {
           />
         </div>
 
-<div style={paneCardFlex}>
-  <div style={paneHeaderRow}>
-    <label style={{ ...paneTitle, marginBottom: 0 }}>Ehdotukset</label>
-    <button
-      onClick={() => setRenkiText("")}
-      style={smallGhostBtn}
-      title="Tyhjennä ehdotukset"
-      aria-label="Tyhjennä ehdotukset"
-    >
-      Tyhjennä
-    </button>
-  </div>
-
-  <textarea
-    value={renkiText}
-    readOnly
-    placeholder="Tähän kertyy kielikuvia, riimejä ja synonyymejä..."
-    style={{ ...textareaFill(MIN_TEXTAREA_PX), background: "#f7f7f7" }}
-  />
-</div>
+        <div style={paneCardFlex}>
+          <label style={paneTitle}>Ehdotukset</label>
+          <textarea
+            value={renkiText}
+            readOnly
+            placeholder="Tähän kertyy kielikuvia, riimejä ja synonyymejä..."
+            style={{ ...textareaFill(MIN_TEXTAREA_PX), background: "#f7f7f7" }}
+          />
+        </div>
       </section>
 
       <footer ref={footerRef} style={{ textAlign: "center", color: "#9ca3af", fontSize: 12, padding: "16px 0" }}>
@@ -529,7 +515,6 @@ const gearBtn = {
   width: 40,
   height: 40,
   border: "none",          // ei kehyksiä
-  outline: "none", 
   background: "transparent",
   color: "#111827",
   display: "grid",
@@ -575,18 +560,3 @@ const versionInline = {
   color: "#6b7280",
   lineHeight: 1,
 };
-
-const paneHeaderRow = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  marginBottom: 6,
-};
-
-const smallGhostBtn = {
-  ...btnStyle,
-  padding: "6px 10px",
-  background: "transparent",
-  borderColor: "#e5e7eb",
-};
-
