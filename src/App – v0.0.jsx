@@ -183,20 +183,20 @@ const initialDev =
   const MIN_PANEL_PX = MIN_TEXTAREA_PX + PANEL_EXTRA;
 
   const recalcPaneHeight = () => {
-  if (showSettings) {
-    setPaneAreaHeight(null); // kun asetukset näkyvissä, sivu saa rullata vapaasti
-    return;
-  }
-  const vh  = window.innerHeight || document.documentElement.clientHeight;
-  const hdr = headerRef.current?.getBoundingClientRect()?.height || 0;
-  const tlb = toolbarRef.current?.getBoundingClientRect()?.height || 0;
-  const ftr = footerRef.current?.getBoundingClientRect()?.height || 0;
+    if (showSettings) {
+      setPaneAreaHeight(null);
+      return;
+    }
+    const vh = window.innerHeight || document.documentElement.clientHeight;
+    const hdr = headerRef.current?.getBoundingClientRect()?.height || 0;
+    const tlb = toolbarRef.current?.getBoundingClientRect()?.height || 0;
+    const ftr = footerRef.current?.getBoundingClientRect()?.height || 0;
+    const chrome = 32 + 12 + 8;
+    const available = Math.floor(vh - hdr - tlb - ftr - chrome);
+    const needMin = isWide ? MIN_PANEL_PX : MIN_PANEL_PX * 2 + 12;
 
-  const chrome = 32 + 12 + 8; // pientä “kromi”-marginaalia
-  const available = Math.max(0, Math.floor(vh - hdr - tlb - ftr - chrome));
-
-  // AINA aseta lukituskorkeus kun asetukset piilossa
-  setPaneAreaHeight(available);
+    if (available < needMin) setPaneAreaHeight(null);
+    else setPaneAreaHeight(available);
   };
 
   useEffect(() => {
@@ -217,7 +217,7 @@ const initialDev =
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.1</div>
+            <div style={versionInline}>v0.0</div>
           </div>
 
           <button
@@ -488,7 +488,6 @@ const paneCardFlex = {
   display: "flex",
   flexDirection: "column",
   minHeight: 0,
-  height: "100%",        // <- lisäys
 };
 
 const paneTitle = { fontWeight: 600, display: "block", marginBottom: 6 };
