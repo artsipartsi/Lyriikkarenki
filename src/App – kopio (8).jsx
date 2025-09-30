@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.7+ (paneelien min 5 riviä, älykäs korkeus)
+ * Lyriikkarenki – v0.5+ (paneelit mahtuvat pystyyn kun asetukset piilossa)
  */
 
 export default function App() {
@@ -97,6 +97,7 @@ export default function App() {
   );
 
   // --- Promptin muodostus ---
+  // Valinnan/kursorin “tikkeri” -> pakottaa esikatselun päivityksen
   const [selTick, setSelTick] = useState(0);
   const bumpSel = () => setSelTick((t) => t + 1);
 
@@ -166,19 +167,11 @@ export default function App() {
     }
   };
 
-  // --- Korkeuden laskenta ja minimit ---
+  // --- Korkeuden laskenta: kun asetukset PIILOSSA, säädetään paneelialue kiinteään korkeuteen ---
   const headerRef = useRef(null);
   const toolbarRef = useRef(null);
   const footerRef = useRef(null);
   const [paneAreaHeight, setPaneAreaHeight] = useState(null);
-
-  // Minimit, jotta tekstialue on aina ≥ 5 riviä
-  const MIN_ROWS = 5;
-  const ROW_PX = 22;               // arvio monospace-rivistä (font 16px, line-height ~1.4)
-  const TEXTAREA_EXTRA = 24;       // textarea padding + border (ylä+ala)
-  const PANEL_EXTRA = 56;          // paneelin padding + otsikkorivin korkeus + marginaali
-  const MIN_TEXTAREA_PX = MIN_ROWS * ROW_PX + TEXTAREA_EXTRA; // ≈ 134 px
-  const MIN_PANEL_PX = MIN_TEXTAREA_PX + PANEL_EXTRA;         // ≈ 190 px
 
   const recalcPaneHeight = () => {
     if (showSettings) {
@@ -192,17 +185,8 @@ export default function App() {
 
     // Sivun sisäiset pystymarginit/paddingit (~32 px) + grid-gap (~12 px) + pieni turvamarginaali
     const chrome = 32 + 12 + 8;
-    const available = Math.floor(vh - hdr - tlb - ftr - chrome);
-
-    // Kuinka paljon MINIMIÄ tarvitaan: leveällä 1 paneeli korkeus, kapealla 2 paneelia + väli
-    const needMin = isWide ? MIN_PANEL_PX : MIN_PANEL_PX * 2 + 12;
-
-    if (available < needMin) {
-      // Ei riitä täyspitkään lukitukseen → anna sivun rullata
-      setPaneAreaHeight(null);
-    } else {
-      setPaneAreaHeight(available);
-    }
+    const h = Math.max(220, Math.floor(vh - hdr - tlb - ftr - chrome));
+    setPaneAreaHeight(h);
   };
 
   useEffect(() => {
@@ -219,9 +203,10 @@ export default function App() {
       {/* Sticky header */}
       <header ref={headerRef} style={headerWrap}>
         <div style={headerInner}>
+          {/* OTSAKE + VERSIO SAMALLA RIVILLÄ */}
           <div style={titleRow}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.8</div>
+            <div style={versionInline}>v0.7</div>
           </div>
 
           <button
@@ -350,12 +335,12 @@ export default function App() {
         </span>
       </section>
 
-      {/* Two panes — kun asetukset piilossa, rajataan korkeus vain jos riittää minimeihin */}
+      {/* Two panes — kun asetukset piilossa, rajataan korkeus ja venytetään textareat */}
       <section
         style={{
           ...layoutCols,
           height: showSettings ? "auto" : paneAreaHeight ?? "auto",
-          overflow: showSettings || paneAreaHeight == null ? "visible" : "hidden",
+          overflow: "hidden",
         }}
       >
         <div style={paneCardFlex}>
@@ -373,7 +358,7 @@ export default function App() {
             onFocus={bumpSel}
             onBlur={bumpSel}
             placeholder="Kirjoita tai liitä sanoitus tähän..."
-            style={textareaFill(MIN_TEXTAREA_PX)}
+            style={textareaFill}
           />
         </div>
 
@@ -383,7 +368,7 @@ export default function App() {
             value={renkiText}
             readOnly
             placeholder="Tähän kertyy kielikuvia, riimejä ja synonyymejä..."
-            style={{ ...textareaFill(MIN_TEXTAREA_PX), background: "#f7f7f7" }}
+            style={{ ...textareaFill, background: "#f7f7f7" }}
           />
         </div>
       </section>
@@ -446,6 +431,13 @@ const headerInner = {
   padding: "10px 0",
 };
 
+const versionStyle = {
+  fontSize: 12,
+  color: "#6b7280",
+  marginTop: 2,
+  textAlign: "center",
+};
+
 const card = {
   maxWidth: 1200,
   margin: "12px auto",
@@ -479,14 +471,15 @@ const paneCardFlex = {
   ...paneCard,
   display: "flex",
   flexDirection: "column",
-  minHeight: 0, // jotta textarea saa kutistua
+  minHeight: 0, // tärkeä, jotta lapsi (textarea) saa kutistua
 };
 
 const paneTitle = { fontWeight: 600, display: "block", marginBottom: 6 };
 
-const baseTextarea = {
+const textareaStyle = {
   width: "100%",
-  resize: "none", // ei venytystä yli varatun tilan
+  minHeight: 320,
+  resize: "vertical",
   padding: "10px 12px",
   borderRadius: 8,
   border: "1px solid #ddd",
@@ -497,12 +490,13 @@ const baseTextarea = {
   lineHeight: 1.4,
 };
 
-// Palauttaa style-objektin, jossa minHeight varmistaa >= 5 riviä
-const textareaFill = (minPx) => ({
-  ...baseTextarea,
+// Täysin tilan täyttävä textarea paneelissa (ei minHeight-pakkoa)
+const textareaFill = {
+  ...textareaStyle,
   flex: 1,
-  minHeight: minPx, // takaa vähintään ~5 riviä
-});
+  minHeight: 0,
+  resize: "none", // ettei kasva yli varatun korkeuden; vaihda "vertical" jos haluat manuaalisen venytyksen
+};
 
 const checkStyle = { userSelect: "none" };
 
