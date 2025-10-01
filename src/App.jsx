@@ -295,7 +295,7 @@ export default function App() {
             </div>
           )}
 
-          <div style={{ marginTop: 12, paddingRight: 12 }}>
+          <div style={{ marginTop: 12, marginRight: 12 }}>
             <label style={{ fontWeight: 600 }}>
               Ehdotusten villiys: {wildness.toFixed(2)}
             </label>
