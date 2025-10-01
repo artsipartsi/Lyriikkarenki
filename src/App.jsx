@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.3 (täyskorkeus myös asetukset auki, täysleveä layout)
+ * Lyriikkarenki – v0.8 (täyskorkeus myös asetukset auki, täysleveä layout)
  */
 
 export default function App() {
@@ -217,7 +217,7 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.3</div>
+            <div style={versionInline}>v0.8</div>
           </div>
 
           <button
@@ -299,16 +299,16 @@ export default function App() {
             <label style={{ fontWeight: 600 }}>
               Ehdotusten villiys: {wildness.toFixed(2)}
             </label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={wildness}
-              onChange={(e) => setWildness(Number(e.target.value))}
-              style={{ width: "100%", marginTop: 8 }}
-              aria-label="Villiyden liukusäädin"
-            />
+<input
+  type="range"
+  min="0"
+  max="1"
+  step="0.01"
+  value={wildness}
+  onChange={(e) => setWildness(Number(e.target.value))}
+  style={rangeFull}
+  aria-label="Villiyden liukusäädin"
+/>
           </div>
 
           {error && <div style={{ color: "#b00020", marginTop: 8 }}>{error}</div>}
@@ -577,3 +577,11 @@ const smallGhostBtn = {
   background: "transparent",
   borderColor: "#e5e7eb",
 };
+
+const rangeFull = {
+  width: "100%",
+  boxSizing: "border-box",   // <-- ei ylitä konttia
+  marginTop: 8,
+  paddingInline: 0,
+};
+
