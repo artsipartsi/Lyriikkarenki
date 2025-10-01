@@ -428,13 +428,12 @@ const headerWrap = {
 };
 
 const headerInner = {
-  width: "100%",
   maxWidth: "none",
-  margin: "0",
+  margin: 0,
   display: "grid",
-  gridTemplateColumns: "40px 1fr 40px",
+  gridTemplateColumns: "40px 1fr 56px", // ennen: "40px 1fr 40px"
   alignItems: "center",
-  padding: "10px 12px",   // pieni hengitysvara reunoihin
+  padding: "10px 12px",
 };
 
 const card = {
@@ -514,14 +513,15 @@ const primaryBtn = {
 };
 
 const gearBtn = {
-  width: 40,
-  height: 40,
-  border: "none",         // ei kehyksiä
+  width: 32,            // ennen 40
+  height: 32,
+  border: "none",
   outline: "none",
   background: "transparent",
   color: "#111827",
   display: "grid",
   placeItems: "center",
+  justifySelf: "end",   // pysyy oikeassa laidassa
   cursor: "pointer",
 };
 
