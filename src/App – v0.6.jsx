@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.7 (ikkunan rulla pois, asetukset sisäinen rulla)
+ * Lyriikkarenki – v0.6 (ikkunan rulla pois, asetukset sisäinen rulla)
  */
 
 export default function App() {
@@ -223,7 +223,7 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.7</div>
+            <div style={versionInline}>v0.6</div>
           </div>
 
           <button
@@ -339,13 +339,12 @@ export default function App() {
 
       {/* Two panes — aina lukittu korkeus (paneAreaHeight) */}
       <section
-  style={{
-    ...layoutCols,
-    flex: 1,        // ← täyttää kaiken jäljellä olevan tilan
-    minHeight: 0,   // ← sallii lapsien kutistua (textarea venyy oikein)
-    overflow: "hidden",
-  }}
->
+        style={{
+          ...layoutCols,
+          height: paneAreaHeight ?? "auto",
+          overflow: "hidden",
+        }}
+      >
         <div style={paneCardFlex}>
           <label style={paneTitle}>Sanoitus</label>
           <textarea
@@ -427,10 +426,8 @@ const pageWrap = {
   background: "linear-gradient(180deg,#fafafa, #ffffff)",
   height: "100dvh",
   width: "100vw",
-  display: "flex",          // ← tärkeä
-  flexDirection: "column",  // ← tärkeä
-  overflow: "hidden",       // ← EI sivun rullaa
   padding: "0 8px",
+  overflow: "hidden", // EI ikkunan pystyrullaa
 };
 
 const headerWrap = {
