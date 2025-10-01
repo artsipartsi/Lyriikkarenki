@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.3 (täyskorkeus myös asetukset auki, täysleveä layout)
+ * Lyriikkarenki – v0.4 (täyskorkeus myös asetukset auki, täysleveä layout)
  */
 
 export default function App() {
@@ -217,7 +217,7 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.3</div>
+            <div style={versionInline}>v0.4</div>
           </div>
 
           <button
@@ -295,20 +295,20 @@ export default function App() {
             </div>
           )}
 
-          <div style={{ marginTop: 12 }}>
+          <div style={{ marginTop: 12, paddingRight: 6 }}>
             <label style={{ fontWeight: 600 }}>
               Ehdotusten villiys: {wildness.toFixed(2)}
             </label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={wildness}
-              onChange={(e) => setWildness(Number(e.target.value))}
-              style={{ width: "100%", marginTop: 8 }}
-              aria-label="Villiyden liukusäädin"
-            />
+<input
+  type="range"
+  min="0"
+  max="1"
+  step="0.01"
+  value={wildness}
+  onChange={(e) => setWildness(Number(e.target.value))}
+  style={rangeFull}
+  aria-label="Villiyden liukusäädin"
+/>
           </div>
 
           {error && <div style={{ color: "#b00020", marginTop: 8 }}>{error}</div>}
@@ -316,14 +316,14 @@ export default function App() {
       )}
 
       {/* ALWAYS-VISIBLE ACTION BAR */}
-      <section ref={toolbarRef} style={toolbarCard}>
-        <button onClick={askSuggestions} disabled={loading} style={primaryBtn}>
-          {loading ? "Haetaan..." : "Ehdota"}
-        </button>
-        <span style={{ color: "#6b7280", fontSize: 12 }}>
-          Vihje: Käytetään valittua tekstiä tai jos mitään ei ole valittu, niin käytetään kursorin riviä.
-        </span>
-      </section>
+<section ref={toolbarRef} style={toolbarCard}>
+  <button onClick={askSuggestions} disabled={loading} style={primaryBtn}>
+    {loading ? "Haetaan..." : "Ehdota"}
+  </button>
+  <span style={hintText}>
+    Vihje: Käytetään valittua tekstiä tai jos mitään ei ole valittu, niin käytetään kursorin riviä.
+  </span>
+</section>
 
       {/* Two panes — aina lukittu korkeus (paneAreaHeight) */}
       <section
@@ -413,9 +413,9 @@ const pageWrap = {
   fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
   background: "linear-gradient(180deg,#fafafa, #ffffff)",
   minHeight: "100vh",
-  padding: 0,             // ennen: "0 16px"
-  width: "100vw",         // täysi näkymäleveys
-  overflowX: "hidden",    // ettei tule vaakarullaa marginaalien takia
+  padding: "0 8px",        // <-- pieni sisämarginaali molemmille reunoille
+  width: "100vw",
+  overflowX: "hidden",
 };
 
 const headerWrap = {
@@ -446,15 +446,26 @@ const card = {
   borderRadius: 0,        // ennen: 12 — nyt kortti “bleedaa” reunoihin
   padding: 14,
   boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+  boxSizing: "border-box",   // <-- varmistus
 };
 
 const toolbarCard = {
   ...card,
   display: "flex",
   alignItems: "center",
-  gap: 12,
+  gap: 8,
   paddingTop: 10,
   paddingBottom: 10,
+  flexWrap: "wrap",             // <-- saa rivittyä kapealla
+};
+
+const hintText = {
+  color: "#6b7280",
+  fontSize: 12,
+  flex: 1,                      // <-- vie jäljellä olevan tilan
+  minWidth: 0,                  // <-- sallii kutistumisen
+  whiteSpace: "normal",         // <-- rivittyy
+  lineHeight: 1.3,
 };
 
 const checksRow = { display: "flex", flexWrap: "wrap", gap: 16 };
@@ -577,4 +588,11 @@ const smallGhostBtn = {
   padding: "6px 10px",
   background: "transparent",
   borderColor: "#e5e7eb",
+};
+
+const rangeFull = {
+  width: "100%",
+  boxSizing: "border-box",   // <-- ei ylitä konttia
+  marginTop: 8,
+  paddingInline: 0,
 };
