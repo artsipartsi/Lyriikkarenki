@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.5 (täyskorkeus myös asetukset auki, täysleveä layout)
+ * Lyriikkarenki – v0.6 (ikkunan rulla pois, asetukset sisäinen rulla)
  */
 
 export default function App() {
@@ -171,12 +171,13 @@ export default function App() {
     }
   };
 
-  // --- Korkeuden laskenta (aina lukittu paneelialue, myös asetukset auki) ---
+  // --- Korkeuden laskenta (asetukset rullaa sisäisesti, ikkuna ei rullaa) ---
   const headerRef = useRef(null);
   const settingsRef = useRef(null);
   const toolbarRef = useRef(null);
   const footerRef = useRef(null);
   const [paneAreaHeight, setPaneAreaHeight] = useState(null);
+  const [settingsMaxHeight, setSettingsMaxHeight] = useState(null);
 
   const MIN_ROWS = 5;
   const ROW_PX = 22;
@@ -188,15 +189,20 @@ export default function App() {
   const recalcPaneHeight = () => {
     const vh = window.innerHeight || document.documentElement.clientHeight;
     const hdr = headerRef.current?.getBoundingClientRect()?.height || 0;
-    const set = settingsRef.current?.getBoundingClientRect()?.height || 0; // huomioi asetuskortin korkeus
+    const setH = settingsRef.current?.getBoundingClientRect()?.height || 0;
     const tlb = toolbarRef.current?.getBoundingClientRect()?.height || 0;
     const ftr = footerRef.current?.getBoundingClientRect()?.height || 0;
 
-    const chrome = 32 + 12 + 8; // hengitysvara & gap
-    const available = Math.max(0, Math.floor(vh - hdr - set - tlb - ftr - chrome));
+    // pieni hengitysvara + grid-gaps
+    const chrome = 32 + 12 + 8;
 
-    // AINA aseta lukituskorkeus — myös asetukset auki
+    // Paneelialue = kaikki muu pois (huom. käytetään kortin TOTEUTUNUTTA korkeutta)
+    const available = Math.max(0, Math.floor(vh - hdr - setH - tlb - ftr - chrome));
     setPaneAreaHeight(available);
+
+    // Kuinka pitkä asetuskortti voi enintään olla ilman, että ikkuna tarvitsee pystyrullaa
+    const settingsAllowance = Math.max(140, Math.floor(vh - hdr - tlb - ftr - MIN_PANEL_PX - 24));
+    setSettingsMaxHeight(settingsAllowance);
   };
 
   useEffect(() => {
@@ -217,13 +223,13 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.5</div>
+            <div style={versionInline}>v0.6</div>
           </div>
 
           <button
             onClick={(e) => {
               setShowSettings((s) => !s);
-              e.currentTarget.blur(); // poista focus-kehys klikin jälkeen
+              e.currentTarget.blur();
             }}
             title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
             style={gearBtn}
@@ -234,9 +240,16 @@ export default function App() {
         </div>
       </header>
 
-      {/* Settings card */}
+      {/* Settings card (sisäinen rulla) */}
       {showSettings && (
-        <section ref={settingsRef} style={card}>
+        <section
+          ref={settingsRef}
+          style={{
+            ...card,
+            maxHeight: settingsMaxHeight ?? "none",
+            overflow: "auto",
+          }}
+        >
           <div style={checksRow}>
             <label style={checkStyle}>
               <input
@@ -295,20 +308,18 @@ export default function App() {
             </div>
           )}
 
-          <div style={{ marginTop: 12, paddingRight: 6 }}>
-            <label style={{ fontWeight: 600 }}>
-              Ehdotusten villiys: {wildness.toFixed(2)}
-            </label>
-<input
-  type="range"
-  min="0"
-  max="1"
-  step="0.01"
-  value={wildness}
-  onChange={(e) => setWildness(Number(e.target.value))}
-  style={rangeFull}
-  aria-label="Villiyden liukusäädin"
-/>
+          <div style={{ marginTop: 12 }}>
+            <label style={{ fontWeight: 600 }}>Ehdotusten villiys: {wildness.toFixed(2)}</label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={wildness}
+              onChange={(e) => setWildness(Number(e.target.value))}
+              style={rangeFull}
+              aria-label="Villiyden liukusäädin"
+            />
           </div>
 
           {error && <div style={{ color: "#b00020", marginTop: 8 }}>{error}</div>}
@@ -316,14 +327,15 @@ export default function App() {
       )}
 
       {/* ALWAYS-VISIBLE ACTION BAR */}
-<section ref={toolbarRef} style={toolbarCard}>
-  <button onClick={askSuggestions} disabled={loading} style={primaryBtn}>
-    {loading ? "Haetaan..." : "Ehdota"}
-  </button>
-  <span style={hintText}>
-    Vihje: Käytetään valittua tekstiä tai jos mitään ei ole valittu, niin käytetään kursorin riviä.
-  </span>
-</section>
+      <section ref={toolbarRef} style={toolbarCard}>
+        <button onClick={askSuggestions} disabled={loading} style={primaryBtn}>
+          {loading ? "Haetaan..." : "Ehdota"}
+        </button>
+        <span style={hintText}>
+          Vihje: Käytetään valittua tekstiä tai jos mitään ei ole valittu, niin käytetään kursorin
+          riviä.
+        </span>
+      </section>
 
       {/* Two panes — aina lukittu korkeus (paneAreaHeight) */}
       <section
@@ -412,10 +424,10 @@ function useMediaQuery(query) {
 const pageWrap = {
   fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
   background: "linear-gradient(180deg,#fafafa, #ffffff)",
-  height: "100dvh",       // <- 100% näkyvistä pikseleistä (välttää OS-osoitepalkin vaihtelun)
+  height: "100dvh",
   width: "100vw",
   padding: "0 8px",
-  overflow: "hidden",     // <- EI ikkunan pystyrullaa
+  overflow: "hidden", // EI ikkunan pystyrullaa
 };
 
 const headerWrap = {
@@ -431,11 +443,10 @@ const headerInner = {
   maxWidth: "none",
   margin: 0,
   display: "grid",
-  gridTemplateColumns: "40px 1fr 56px", // ennen: "40px 1fr 40px"
+  gridTemplateColumns: "40px 1fr 56px",
   alignItems: "center",
   padding: "10px 12px",
 };
-
 
 const card = {
   width: "100%",
@@ -443,10 +454,10 @@ const card = {
   margin: "12px 0",
   background: "white",
   border: "1px solid #eee",
-  borderRadius: 0,        // ennen: 12 — nyt kortti “bleedaa” reunoihin
+  borderRadius: 0,
   padding: 14,
   boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-  boxSizing: "border-box",   // <-- varmistus
+  boxSizing: "border-box",
 };
 
 const toolbarCard = {
@@ -456,15 +467,15 @@ const toolbarCard = {
   gap: 8,
   paddingTop: 10,
   paddingBottom: 10,
-  flexWrap: "wrap",             // <-- saa rivittyä kapealla
+  flexWrap: "wrap",
 };
 
 const hintText = {
   color: "#6b7280",
   fontSize: 12,
-  flex: 1,                      // <-- vie jäljellä olevan tilan
-  minWidth: 0,                  // <-- sallii kutistumisen
-  whiteSpace: "normal",         // <-- rivittyy
+  flex: 1,
+  minWidth: 0,
+  whiteSpace: "normal",
   lineHeight: 1.3,
 };
 
@@ -483,7 +494,7 @@ const paneCardFlex = {
   display: "flex",
   flexDirection: "column",
   minHeight: 0,
-  height: "100%", // venyy aina varattuun paneelialueeseen
+  height: "100%",
 };
 
 const paneTitle = { fontWeight: 600, display: "block", marginBottom: 6 };
@@ -493,7 +504,7 @@ const baseTextarea = {
   resize: "none",
   padding: "10px 12px",
   borderRadius: 8,
-  border: "1px solid #ddd",
+  border: "1px solid " + "#ddd",
   outline: "none",
   background: "white",
   fontFamily:
@@ -504,7 +515,7 @@ const baseTextarea = {
 const textareaFill = (minPx) => ({
   ...baseTextarea,
   flex: 1,
-  minHeight: minPx, // vähintään 5 riviä, venyy tarpeen mukaan
+  minHeight: minPx,
 });
 
 const checkStyle = { userSelect: "none" };
@@ -525,7 +536,7 @@ const primaryBtn = {
 };
 
 const gearBtn = {
-  width: 32,            // ennen 40
+  width: 32,
   height: 32,
   border: "none",
   outline: "none",
@@ -533,7 +544,7 @@ const gearBtn = {
   color: "#111827",
   display: "grid",
   placeItems: "center",
-  justifySelf: "end",   // pysyy oikeassa laidassa
+  justifySelf: "end",
   cursor: "pointer",
 };
 
@@ -557,7 +568,7 @@ const titleRowCentered = {
   display: "flex",
   alignItems: "baseline",
   gap: 8,
-  justifySelf: "center", // keskittää solussa
+  justifySelf: "center",
   width: "max-content",
   textAlign: "center",
 };
@@ -592,7 +603,7 @@ const smallGhostBtn = {
 
 const rangeFull = {
   width: "100%",
-  boxSizing: "border-box",   // <-- ei ylitä konttia
+  boxSizing: "border-box",
   marginTop: 8,
   paddingInline: 0,
 };
