@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.5 (täyskorkeus myös asetukset auki, täysleveä layout)
+ * Lyriikkarenki – v0.4 (täyskorkeus myös asetukset auki, täysleveä layout)
  */
 
 export default function App() {
@@ -217,7 +217,7 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.5</div>
+            <div style={versionInline}>v0.4</div>
           </div>
 
           <button
@@ -412,10 +412,10 @@ function useMediaQuery(query) {
 const pageWrap = {
   fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
   background: "linear-gradient(180deg,#fafafa, #ffffff)",
-  height: "100dvh",       // <- 100% näkyvistä pikseleistä (välttää OS-osoitepalkin vaihtelun)
+  minHeight: "100vh",
+  padding: "0 8px",        // <-- pieni sisämarginaali molemmille reunoille
   width: "100vw",
-  padding: "0 8px",
-  overflow: "hidden",     // <- EI ikkunan pystyrullaa
+  overflowX: "hidden",
 };
 
 const headerWrap = {
