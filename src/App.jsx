@@ -582,6 +582,7 @@ const rangeFull = {
   width: "100%",
   boxSizing: "border-box",   // <-- ei ylitä konttia
   marginTop: 8,
+  marginRight: 8,
   paddingInline: 0,
 };
 
