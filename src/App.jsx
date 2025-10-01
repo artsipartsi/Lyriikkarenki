@@ -579,7 +579,7 @@ const smallGhostBtn = {
 };
 
 const rangeFull = {
-  width: "100%",
+  width: "95%",
   boxSizing: "border-box",   // <-- ei ylitä konttia
   marginTop: 8,
   marginRight: 8,
