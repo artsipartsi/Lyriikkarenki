@@ -18,4 +18,5 @@ if %errorlevel%==0 (
 git commit -m "%MSG%"
 if errorlevel 1 exit /b %errorlevel%
 
-git push
+REM Puske tämä työtilan HEAD aina origin/main:iin
+git push origin HEAD:main
