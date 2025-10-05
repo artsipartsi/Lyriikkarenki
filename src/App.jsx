@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.9  (täyskorkeus myös asetukset auki, täysleveä layout)
+ * Lyriikkarenki – v0.9 (täyskorkeus myös asetukset auki, täysleveä layout)
  */
 
 export default function App() {
