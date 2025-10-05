@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v1.0 (Help-overlay + auto-scroll Ehdotukset)
+ * Lyriikkarenki – v0.9 (täyskorkeus myös asetukset auki, täysleveä layout)
  */
 
 export default function App() {
@@ -10,19 +10,23 @@ export default function App() {
     const saved = localStorage.getItem("lr_showSettings");
     return saved ? saved === "true" : true;
   });
-  const [showHelp, setShowHelp] = useState(false); // <-- UUSI: käyttöohje-ikkuna
 
   // --- Kehittäjätila (backdoor) ---
   const qs = new URLSearchParams(window.location.search);
-  const devParam = qs.get("dev");
+  const devParam = qs.get("dev"); // "1" | "0" | null
   const initialDev =
-    devParam === "1" ? true : devParam === "0" ? false : localStorage.getItem("lr_dev") === "true";
+    devParam === "1"
+      ? true
+      : devParam === "0"
+      ? false
+      : localStorage.getItem("lr_dev") === "true";
   const [devMode, setDevMode] = useState(initialDev);
   useEffect(() => localStorage.setItem("lr_dev", String(devMode)), [devMode]);
   useEffect(() => {
     const onKey = (e) => {
-      if (e.ctrlKey && e.altKey && (e.key === "d" || e.key === "D")) setDevMode((v) => !v);
-      if (e.key === "Escape") setShowHelp(false); // Esc sulkee ohjeen
+      if (e.ctrlKey && e.altKey && (e.key === "d" || e.key === "D")) {
+        setDevMode((v) => !v);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -84,7 +88,7 @@ export default function App() {
 
   // --- Ref ---
   const authorRef = useRef(null);
-  const renkiRef = useRef(null); // auto-scroll
+  const renkiRef = useRef(null);
 
   // --- Layout (responsiivinen sarake/rinnakkain) ---
   const isWide = useMediaQuery("(min-width: 900px)");
@@ -159,6 +163,10 @@ export default function App() {
       const data = await r.json();
       const content = (data?.content || "").trim();
       if (!content) throw new Error("Tyhjä vastaus.");
+/*
+      const usedModel = data?.model; // "gpt-4o-mini" tms.
+      setRenkiText((prev) => prev + `---------------\n${content}\n${usedModel}\n`);
+ */
       setRenkiText((prev) => prev + `---------------\n${content}\n`);
     } catch (e) {
       setError(e.message || String(e));
@@ -168,7 +176,7 @@ export default function App() {
     }
   };
 
-  // --- Auto-scroll Ehdotukset-ikkunaan ---
+  // --- Auto-scroll Ehdotukset-ikkunaan aina kun teksti päivittyy ---
   useEffect(() => {
     const el = renkiRef.current;
     if (!el) return;
@@ -192,12 +200,14 @@ export default function App() {
   const recalcPaneHeight = () => {
     const vh = window.innerHeight || document.documentElement.clientHeight;
     const hdr = headerRef.current?.getBoundingClientRect()?.height || 0;
-    const set = settingsRef.current?.getBoundingClientRect()?.height || 0;
+    const set = settingsRef.current?.getBoundingClientRect()?.height || 0; // huomioi asetuskortin korkeus
     const tlb = toolbarRef.current?.getBoundingClientRect()?.height || 0;
     const ftr = footerRef.current?.getBoundingClientRect()?.height || 0;
 
-    const chrome = 32 + 12 + 8;
+    const chrome = 32 + 12 + 8; // hengitysvara & gap
     const available = Math.max(0, Math.floor(vh - hdr - set - tlb - ftr - chrome));
+
+    // AINA aseta lukituskorkeus — myös asetukset auki
     setPaneAreaHeight(available);
   };
 
@@ -215,34 +225,23 @@ export default function App() {
       {/* Sticky header */}
       <header ref={headerRef} style={headerWrap}>
         <div style={headerInner}>
-          <div /> {/* vasen täytesarake */}
+          <div /> {/* vasen täytesarake 40px */}
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v1.0</div>
+            <div style={versionInline}>v0.9 (gpt-4.1)</div>
           </div>
 
-          {/* ?-nappi */}
-          <button
-            onClick={() => setShowHelp(true)}
-            title="Näytä käyttöohje"
-            style={iconBtn}
-            aria-label="Käyttöohje"
-          >
-            <span style={iconGlyph}>?</span>
-          </button>
-
-          {/* Asetukset-nappi */}
           <button
             onClick={(e) => {
               setShowSettings((s) => !s);
-              e.currentTarget.blur();
+              e.currentTarget.blur(); // poista focus-kehys klikin jälkeen
             }}
             title={showSettings ? "Piilota asetukset" : "Näytä asetukset"}
-            style={iconBtn}
+            style={gearBtn}
             aria-label="Asetukset"
           >
-            <span style={iconGlyph}>⚙</span>
+            <span style={gearGlyph}>⚙</span>
           </button>
         </div>
       </header>
@@ -328,7 +327,7 @@ export default function App() {
         </section>
       )}
 
-      {/* Action bar */}
+      {/* ALWAYS-VISIBLE ACTION BAR */}
       <section ref={toolbarRef} style={toolbarCard}>
         <button onClick={askSuggestions} disabled={loading} style={primaryBtn}>
           {loading ? "Haetaan..." : "Ehdota"}
@@ -338,7 +337,7 @@ export default function App() {
         </span>
       </section>
 
-      {/* Two panes */}
+      {/* Two panes — aina lukittu korkeus (paneAreaHeight) */}
       <section
         style={{
           ...layoutCols,
@@ -379,7 +378,7 @@ export default function App() {
           </div>
 
           <textarea
-            ref={renkiRef}
+            ref={renkiRef}  // <-- UUSI: ref kiinni auto-scrollia varten
             value={renkiText}
             readOnly
             placeholder="Tähän kertyy kielikuvia, riimejä ja synonyymejä..."
@@ -394,54 +393,6 @@ export default function App() {
       >
         © {new Date().getFullYear()} Lyriikkarenki
       </footer>
-
-      {/* --- HELP OVERLAY (koko ikkunan kokoinen) --- */}
-      {showHelp && (
-        <div role="dialog" aria-modal="true" style={helpOverlay}>
-          <div style={helpInner}>
-            <button
-              onClick={() => setShowHelp(false)}
-              aria-label="Sulje ohje"
-              title="Sulje"
-              style={helpCloseBtn}
-            >
-              ✕
-            </button>
-
-            <h1 style={{ marginTop: 0, marginBottom: 8 }}>Lyriikkarenki – käyttöohje</h1>
-            <p style={{ marginTop: 0, color: "#6b7280" }}>
-              Toimii kaikenkokoisilla laitteilla kännykästä läppäriin ja isoon ruutuun.
-            </p>
-
-            <h3>Mitä teen ensin?</h3>
-            <ol>
-              <li>Kirjoita tai liitä teksti <strong>Sanoitus</strong>-ikkunaan.</li>
-              <li>Valitse tekstistä pätkä – tai jätä pelkkä kursori riville.</li>
-              <li>Valitse asetuksista, haluatko kielikuvia, synonyymejä ja/tai riimejä.</li>
-              <li>Tarvittaessa anna <strong>Vapaamuotoinen ohje</strong> (esim. “melankolinen, 8 tavua/rivi”).</li>
-              <li>Paina <strong>Ehdota</strong>. Ehdotukset ilmestyvät oikealle ja skrollaavat näkyviin.</li>
-            </ol>
-
-            <h3>Vinkkejä</h3>
-            <ul>
-              <li><em>Valinta voittaa kursorin:</em> jos valitset tekstiä, analyysi tehdään siitä.</li>
-              <li><em>Villiyden säätö:</em> nosta arvoa, kun haluat rohkeampia ideoita.</li>
-              <li><em>Puhdas pöytä:</em> paina “Tyhjennä” Ehdotukset-otsikon vierestä.</li>
-            </ul>
-
-            <h3>Tekstieditorin perustoiminnot</h3>
-            <p>
-              <strong>Vapaamuotoinen ohje</strong>- ja <strong>Sanoitus</strong>-ikkunoissa toimivat tutut
-              komennot: Valitse kaikki, Poista, Peru, Tee uudelleen, Kopioi, Leikkaa, Liitä…
-              (Näppäinyhdistelmät vaihtelevat laitteesta riippuen.)
-            </p>
-
-            <p style={{ color: "#6b7280", fontSize: 12, marginTop: 24 }}>
-              Sulje ohje painamalla ✕ tai Esc.
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -475,9 +426,9 @@ const pageWrap = {
   fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif",
   background: "linear-gradient(180deg,#fafafa, #ffffff)",
   minHeight: "100vh",
-  padding: 0,
-  width: "100vw",
-  overflowX: "hidden",
+  padding: 0,             // ennen: "0 16px"
+  width: "100vw",         // täysi näkymäleveys
+  overflowX: "hidden",    // ettei tule vaakarullaa marginaalien takia
 };
 
 const headerWrap = {
@@ -493,10 +444,9 @@ const headerInner = {
   maxWidth: "none",
   margin: 0,
   display: "grid",
-  gridTemplateColumns: "40px 1fr 40px 40px", // vasen täyte | otsikko | ? | ⚙
+  gridTemplateColumns: "40px 1fr 56px", // ennen: "40px 1fr 40px"
   alignItems: "center",
   padding: "10px 12px",
-  columnGap: 8,
 };
 
 const card = {
@@ -505,7 +455,7 @@ const card = {
   margin: "12px 0",
   background: "white",
   border: "1px solid #eee",
-  borderRadius: 0,
+  borderRadius: 0,        // ennen: 12 — nyt kortti “bleedaa” reunoihin
   padding: 14,
   boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
 };
@@ -517,7 +467,6 @@ const toolbarCard = {
   gap: 12,
   paddingTop: 10,
   paddingBottom: 10,
-  flexWrap: "wrap",
 };
 
 const checksRow = { display: "flex", flexWrap: "wrap", gap: 16 };
@@ -535,7 +484,7 @@ const paneCardFlex = {
   display: "flex",
   flexDirection: "column",
   minHeight: 0,
-  height: "100%",
+  height: "100%", // venyy aina varattuun paneelialueeseen
 };
 
 const paneTitle = { fontWeight: 600, display: "block", marginBottom: 6 };
@@ -556,7 +505,7 @@ const baseTextarea = {
 const textareaFill = (minPx) => ({
   ...baseTextarea,
   flex: 1,
-  minHeight: minPx,
+  minHeight: minPx, // vähintään 5 riviä, venyy tarpeen mukaan
 });
 
 const checkStyle = { userSelect: "none" };
@@ -576,8 +525,8 @@ const primaryBtn = {
   borderColor: "#111827",
 };
 
-const iconBtn = {
-  width: 32,
+const gearBtn = {
+  width: 32,            // ennen 40
   height: 32,
   border: "none",
   outline: "none",
@@ -585,10 +534,15 @@ const iconBtn = {
   color: "#111827",
   display: "grid",
   placeItems: "center",
+  justifySelf: "end",   // pysyy oikeassa laidassa
   cursor: "pointer",
 };
 
-const iconGlyph = { fontSize: 20, lineHeight: 1, display: "block" };
+const gearGlyph = {
+  fontSize: 20,
+  lineHeight: 1,
+  display: "block",
+};
 
 const devBadge = {
   display: "inline-block",
@@ -604,7 +558,7 @@ const titleRowCentered = {
   display: "flex",
   alignItems: "baseline",
   gap: 8,
-  justifySelf: "center",
+  justifySelf: "center", // keskittää solussa
   width: "max-content",
   textAlign: "center",
 };
@@ -643,43 +597,4 @@ const rangeFull = {
   marginTop: 8,
   marginRight: 8,
   paddingInline: 0,
-};
-
-/* -------- HELP OVERLAY styles -------- */
-
-const helpOverlay = {
-  position: "fixed",
-  inset: 0,
-  zIndex: 1000,
-  background: "rgba(0,0,0,0.5)",
-  backdropFilter: "blur(2px)",
-  display: "grid",
-  placeItems: "center",
-};
-
-const helpInner = {
-  width: "min(920px, 92vw)",
-  height: "min(86vh, 960px)",
-  background: "white",
-  borderRadius: 14,
-  border: "1px solid #e5e7eb",
-  boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
-  padding: 20,
-  boxSizing: "border-box",
-  overflow: "auto",
-  position: "relative",
-};
-
-const helpCloseBtn = {
-  position: "absolute",
-  top: 10,
-  right: 10,
-  width: 36,
-  height: 36,
-  borderRadius: 10,
-  border: "1px solid #e5e7eb",
-  background: "white",
-  cursor: "pointer",
-  fontSize: 18,
-  lineHeight: "18px",
 };
