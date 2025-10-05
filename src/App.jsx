@@ -221,7 +221,7 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.9 gpt-4.1</div>
+            <div style={versionInline}>v0.9 (gpt-4.1)</div>
           </div>
 
           <button
