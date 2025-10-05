@@ -88,7 +88,7 @@ export default function App() {
 
   // --- Ref ---
   const authorRef = useRef(null);
-  const renkiRef = useRef(null);        // <-- UUSI: ehdotukset-ikkunan ref auto-scrollille
+  const renkiRef = useRef(null);
 
   // --- Layout (responsiivinen sarake/rinnakkain) ---
   const isWide = useMediaQuery("(min-width: 900px)");
@@ -163,6 +163,10 @@ export default function App() {
       const data = await r.json();
       const content = (data?.content || "").trim();
       if (!content) throw new Error("Tyhjä vastaus.");
+/*
+      const usedModel = data?.model; // "gpt-4o-mini" tms.
+      setRenkiText((prev) => prev + `---------------\n${content}\n${usedModel}\n`);
+ */
       setRenkiText((prev) => prev + `---------------\n${content}\n`);
     } catch (e) {
       setError(e.message || String(e));
@@ -171,13 +175,6 @@ export default function App() {
       refreshPromptPreview();
     }
   };
-
-  // --- Auto-scroll Ehdotukset-ikkunaan aina kun teksti päivittyy ---
-  useEffect(() => {
-    const el = renkiRef.current;
-    if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-  }, [renkiText]);
 
   // --- Korkeuden laskenta (aina lukittu paneelialue, myös asetukset auki) ---
   const headerRef = useRef(null);
@@ -307,16 +304,16 @@ export default function App() {
             <label style={{ fontWeight: 600 }}>
               Ehdotusten villiys: {wildness.toFixed(2)}
             </label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={wildness}
-              onChange={(e) => setWildness(Number(e.target.value))}
-              style={rangeFull}
-              aria-label="Villiyden liukusäädin"
-            />
+<input
+  type="range"
+  min="0"
+  max="1"
+  step="0.01"
+  value={wildness}
+  onChange={(e) => setWildness(Number(e.target.value))}
+  style={rangeFull}
+  aria-label="Villiyden liukusäädin"
+/>
           </div>
 
           {error && <div style={{ color: "#b00020", marginTop: 8 }}>{error}</div>}
@@ -374,7 +371,6 @@ export default function App() {
           </div>
 
           <textarea
-            ref={renkiRef}  // <-- UUSI: ref kiinni auto-scrollia varten
             value={renkiText}
             readOnly
             placeholder="Tähän kertyy kielikuvia, riimejä ja synonyymejä..."
@@ -589,8 +585,9 @@ const smallGhostBtn = {
 
 const rangeFull = {
   width: "95%",
-  boxSizing: "border-box",
+  boxSizing: "border-box",   // <-- ei ylitä konttia
   marginTop: 8,
   marginRight: 8,
   paddingInline: 0,
 };
+
