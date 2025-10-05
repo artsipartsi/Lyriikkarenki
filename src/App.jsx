@@ -162,7 +162,8 @@ export default function App() {
       const data = await r.json();
       const content = (data?.content || "").trim();
       if (!content) throw new Error("Tyhjä vastaus.");
-      setRenkiText((prev) => prev + `---------------\n${content}\n`);
+      const usedModel = data?.model; // "gpt-4o-mini" tms.
+      setRenkiText((prev) => prev + `---------------\n${content}\n${usedModel}\n`);
     } catch (e) {
       setError(e.message || String(e));
     } finally {
