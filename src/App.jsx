@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v1.0 (Help-overlay + auto-scroll Ehdotukset)
+ * Lyriikkarenki – v0.10 (Help-overlay + auto-scroll Ehdotukset)
  */
 
 export default function App() {
@@ -159,6 +159,10 @@ export default function App() {
       const data = await r.json();
       const content = (data?.content || "").trim();
       if (!content) throw new Error("Tyhjä vastaus.");
+/*
+      const usedModel = data?.model; // "gpt-4o-mini" tms.
+      setRenkiText((prev) => prev + `---------------\n${content}\n${usedModel}\n`);
+ */
       setRenkiText((prev) => prev + `---------------\n${content}\n`);
     } catch (e) {
       setError(e.message || String(e));
@@ -219,7 +223,7 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v1.0</div>
+            <div style={versionInline}>v0.9 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
