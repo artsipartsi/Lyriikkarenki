@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.8 (täyskorkeus myös asetukset auki, täysleveä layout)
+ * Lyriikkarenki – v0.9 (täyskorkeus myös asetukset auki, täysleveä layout)
  */
 
 export default function App() {
@@ -162,8 +162,11 @@ export default function App() {
       const data = await r.json();
       const content = (data?.content || "").trim();
       if (!content) throw new Error("Tyhjä vastaus.");
+/*
       const usedModel = data?.model; // "gpt-4o-mini" tms.
       setRenkiText((prev) => prev + `---------------\n${content}\n${usedModel}\n`);
+ */
+      setRenkiText((prev) => prev + `---------------\n${content}\n`);
     } catch (e) {
       setError(e.message || String(e));
     } finally {
@@ -218,7 +221,7 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.8 dev</div>
+            <div style={versionInline}>v0.9 gpt-4.1</div>
           </div>
 
           <button
