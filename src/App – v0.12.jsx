@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.13 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.12 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -263,7 +263,7 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.13 (gpt-4.1)</div>
+            <div style={versionInline}>v0.12 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -358,14 +358,16 @@ export default function App() {
               setAuthorTextWithHistory(e.target.value);
               bumpSel();
 
-              // AUTOMAATTI: kun viimeisin sana on vähintään 4 kirjainta
+              // AUTOMAATTI: kun rivillä on ≥4-kirjaiminen sana ja sen jälkeen välilyönti,
               // ja kirjoittaja pysähtyy ~2.3 s → laukaise haku
               if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
               const line = getCurrentLineText();
+              const endsWithSpace = /\s$/.test(line);
               const lw = lastWord(line);
-              if (lw && lw.length >= 4) {
+              if (endsWithSpace && lw && lw.length >= 4) {
                 typingTimerRef.current = setTimeout(() => {
-                  askSmartSuggestions(line.trim(), "pause");
+                  // välilyönti poistetaan ennen lähetystä
+                  askSmartSuggestions(line.trimEnd(), "pause");
                 }, AUTO_DELAY_MS);
               }
             }}
@@ -377,9 +379,6 @@ export default function App() {
                 //  kielikuvat koko rivistä jos vähintään 2 sanaa)
                 setTimeout(() => askSmartSuggestions(lineBeforeBreak, "enter"), 0);
               }
-            }}
-            onBlur={() => {
-              if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
             }}
 
             onSelect={bumpSel}
