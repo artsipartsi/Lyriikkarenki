@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.18 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.17 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -121,7 +121,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
   // Kehittäjätilan prompt-esikatselu
   const [promptPreview, setPromptPreview] = useState("");
-  const refreshPromptPreview = (basisArg) => {
+  const refreshPromptPreview = () => {
     if (!devMode) return;
     const basis = basisArg ?? getSelectionOrCurrentLine();
     setPromptPreview(buildPrompt(basis || "<ei valintaa / kursoririvi tyhjä>"));
@@ -262,7 +262,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.18 (gpt-4.1)</div>
+            <div style={versionInline}>v0.17 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -381,13 +381,13 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
             }}
             onBlur={() => {
               if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-              bumpSel();
             }}
 
             onSelect={bumpSel}
             onKeyUp={bumpSel}
             onMouseUp={bumpSel}
             onFocus={bumpSel}
+            onBlur={bumpSel}
             placeholder="Kirjoita tai liitä sanoitus tähän..."
             style={textareaFill(MIN_TEXTAREA_PX)}
           />
