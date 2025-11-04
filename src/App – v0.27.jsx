@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.28 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.27 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -158,31 +158,23 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
   const wordCount = (s) => (s.trim() ? s.trim().split(/\s+/).length : 0);
   const lastWord = (s) => (s.trim() ? s.trim().split(/\s+/).pop() : "");
 
-  // Älykäs rivipohjainen promptti – käyttää ensisijaisesti kursoria edeltävää sanaa
-  const buildPromptSmart = (line, focusWord) => {
+  const buildPromptSmart = (line) => {
     const txt = line ?? "";
-    const fw = (focusWord || "").trim();
+    const wc = wordCount(txt.trim());
+    const lw = lastWord(txt.trim());
     let p = `Teksti analysoitavaksi:\n"${txt}"\n\n`;
-
-    if (fw) {
-      p += `Keksi synonyymejä ja riimiehdotuksia sanasta: "${fw}".\n`;
-    } else {
-      // fallback: rivin viimeinen sana, jos caret-sanaa ei saada
-      const fallback = (txt.trim().split(/\s+/).pop() || "").trim();
-      if (fallback) p += `Keksi synonyymejä ja riimiehdotuksia sanasta: "${fallback}".\n`;
+    if (wc >= 1 && lw) {
+      p += `Keksi synonyymejä ja riimiehdotuksia sanasta: "${lw}".\n`;
     }
-
-    if ((txt.trim().split(/\s+/).length || 0) >= 2) {
-      p += `Keksi myös 2–4 tuoretta kielikuvaa koko rivistä.\n`;
+    if (wc >= 2) {
+      p += `Keksi kielikuvia koko tekstistä.\n`;
     }
-
-    const free = (localStorage.getItem("lr_freeform") || "").trim();
-    if (free) p += `\nLisäohje: ${free}\n`;
+    if (freeform.trim()) p += `Lisäohje: ${freeform.trim()}\n`;
     return p;
   };
 
-  const askSmartSuggestions = async (line, reason = "auto", focusWord = null) => {
-    const sig = `${reason}|${line.trim()}|${(focusWord || "").toLowerCase()}`;
+  const askSmartSuggestions = async (line, reason = "auto") => {
+    const sig = `${reason}|${line.trim()}`;
     if (!line.trim() || sig === lastAutoSig) return; // estä duplikaatit
     setLastAutoSig(sig);
 
@@ -193,17 +185,24 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
     setError("");
     setLoading(true);
     try {
-      const prompt = buildPromptSmart(line, focusWord);
+      const prompt = buildPromptSmart(line);
+      setLastPromptBasis(line);              // talteen mahdollisia dev-käyttöjä varten
       const r = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, temperature: 1.0 }),
+        body: JSON.stringify({ prompt, temperature: 1.0 }), // villiys aina maksimi
       });
-      // ... (loppu kuten ennen: tarkista r.ok, lue data, lisää renkiTextiin)
+      if (!r.ok) throw new Error(`API-virhe ${r.status}: ${await r.text()}`);
+      const data = await r.json();
+      const content = (data?.content || "").trim();
+      if (!content) throw new Error("Tyhjä vastaus.");
+      setRenkiText((prev) => prev + `---------------\n${content}\n`);
     } catch (e) {
-      // ... virheenkäsittely kuten ennen
+      setError(e.message || String(e));
     } finally {
       setLoading(false);
+      // Näytä esikatselussa TÄSMÄLLEEN sama rivi, joka lähetettiin API:lle
+      refreshPromptPreview?.(line);
     }
   };
 
@@ -298,7 +297,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.28 (gpt-4.1)</div>
+            <div style={versionInline}>v0.27 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -406,16 +405,16 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
               lastPauseRef.current = { line: "", at: 0 };
               const textNow = e.target.value;
               setAuthorTextWithHistory(textNow);
+              bumpSel();
 
+              // Käytä UUTTA arvoa ja caretia -> ei katoa viimeinen merkki
               if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
               const caret = e.target.selectionEnd ?? textNow.length;
               const line = getLineAt(textNow, caret);
-              const focusWord = getWordBeforeCaret(textNow, caret);
-
-              // (valinnainen kynnys pituudelle)
-              if (focusWord && focusWord.length >= 2) {
+              const lw = lastWord(line);
+              if (lw && lw.length >= 4) {
                 typingTimerRef.current = setTimeout(() => {
-                  askSmartSuggestions(line.trim(), "pause", focusWord);
+                  askSmartSuggestions(line.trim(), "pause");
                 }, AUTO_DELAY_MS);
               }
             }}
@@ -425,14 +424,19 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
                 const lineBeforeBreak = getLineAt(authorText, caret);
                 const lineTrim = (lineBeforeBreak || "").trim();
 
-                // Enter-eston nykylogiikka:
+                // Estä enter-haku, jos samasta rivistä tehtiin juuri "pause"-autohaku
                 const { line, at } = lastPauseRef.current || {};
-                const RECENT_MS = 60_000;
-                const justPausedSameLine = line && line === lineTrim && Date.now() - at < RECENT_MS;
-                if (justPausedSameLine) return; // vain rivinvaihto – ei hakua
+                const RECENT_MS = 60_000; // salli Enter-haku vasta 60 s jälkeen tai kun rivi muuttuu
+                const justPausedSameLine =
+                  line && line === lineTrim && Date.now() - at < RECENT_MS;
 
-                const focusWord = getWordBeforeCaret(authorText, caret); // UUSI
-                setTimeout(() => askSmartSuggestions(lineBeforeBreak, "enter", focusWord), 0);
+                if (justPausedSameLine) {
+                  // ei hakua – käyttäjä vain teki rivinvaihdon aiemmin autohakuiltuun riviin
+                  return;
+                }
+
+                // Muuten tee normaali enter-haku (välitön)
+                setTimeout(() => askSmartSuggestions(lineBeforeBreak, "enter"), 0);
               }
             }}
             onBlur={() => {
@@ -504,20 +508,31 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
                 Kirjoita tai liitä teksti <strong>Sanoitus</strong>-kenttään vasemmalla.
               </li>
               <li>
-                Odota hetki: jos olet kirjoittanut vähintään nelikirjaimisen sanan ja et kirjoita n. <strong>3 sekuntiin</strong>, tekoäly hakee automaattisesti ehdotuksia. Riimiehdotukset ja synonyymit liittyvät viimeiseen sanaan, kielikuvat koko riviin. Rivillä on oltava vähintään kaksi sanaa, jotta kielikuvia haettaisiin.
+                Jätä kursori rivin loppuun – tai valitse osa tekstistä, jos haluat hakea vain siitä.
               </li>
               <li>
-                Myös rivinvaihto tekee ehdotuksia samalla systeemillä.
+                Odota hetki: kun et kirjoita n. <strong>3 sekuntiin</strong>, tekoäly hakee automaattisesti ehdotuksia.
               </li>
               <li>
                 Ehdotukset ilmestyvät oikeanpuoleiseen <strong>Ehdotukset</strong>-ikkunaan ja skrollaavat automaattisesti näkyviin.
               </li>
               <li>
-                Voit myös valita tekstiä ja painaa <strong>Ehdota valitusta tekstistä</strong> -painiketta. Riimiehdotukset ja synonyymit liittyvät viimeiseen sanaan, kielikuvat koko tekstiin.
+                Voit myös painaa <strong>Ehdota valitusta tekstistä</strong> -painiketta manuaalisesti.
               </li>
             </ol>
 
-            <h2>2. Asetukset ⚙</h2>
+            <h2>2. Rivinvaihdon logiikka</h2>
+            <ul>
+              <li>
+                Jos olet jo saanut automaattisen haun rivin lopusta (tauko 3 s) ja painat Enteriä vain
+                siirtyäksesi seuraavalle riville, <strong>uutta hakua ei tehdä</strong>.
+              </li>
+              <li>
+                Enter laukaisee haun vain, jos kirjoitat uutta tekstiä riville, jota ei ole vielä haettu.
+              </li>
+            </ul>
+
+            <h2>3. Asetukset ⚙</h2>
             <ul>
               <li>
                 Avaa asetukset oikean yläkulman <strong>⚙</strong>-painikkeesta.
@@ -526,9 +541,15 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
                 Kirjoita halutessasi <strong>vapaamuotoinen ohje tekoälylle</strong> — esim.:
                 <em> “sävy melankolinen”, “vältä anglismeja”, “8 tavua per rivi”</em>.
               </li>
+              <li>
+                Lennokkuus (0–1) säätää kielen rohkeutta ja mielikuvituksellisuutta.
+              </li>
+              <li>
+                Kielikuvat, synonyymit ja riimit ovat aina aktiivisia, joten niitä ei tarvitse erikseen valita.
+              </li>
             </ul>
 
-            <h2>3. Ehdotusten hallinta</h2>
+            <h2>4. Ehdotusten hallinta</h2>
             <ul>
               <li>
                 Ehdotukset näkyvät aikajärjestyksessä, ja jokaisen haun väliin tulee katkoviiva.
@@ -541,16 +562,15 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
               </li>
             </ul>
 
-            <h2>4. Vinkkejä ja pikanäppäimiä</h2>
+            <h2>5. Vinkkejä ja pikanäppäimiä</h2>
             <ul>
               <li><kbd>Ctrl + Z</kbd> tai <kbd>Cmd + Z</kbd> – Peruuta viimeisin muutos</li>
               <li><kbd>Ctrl + Y</kbd> tai <kbd>Cmd + Shift + Z</kbd> – Tee uudestaan</li>
-              <li><kbd>Ctrl + C</kbd> tai <kbd>Cmd + C</kbd> – Kopioi valittu teksti leikepöydälle</li>
-              <li><kbd>Ctrl + V</kbd> tai <kbd>Cmd + V</kbd> – Liitä valittu teksti leikepöydältä</li>
-              <li><kbd>Esc</kbd> tai – Sulje tämä ohje</li>
+              <li><kbd>Esc</kbd> – Sulje tämä ohje</li>
+              <li><kbd>Ctrl + Alt + D</kbd> – Avaa kehittäjätila (näyttää tekoälylle lähetetyt promptit)</li>
             </ul>
 
-            <h2>5. Automaattihaku ja yksityisyys</h2>
+            <h2>6. Automaattihaku ja yksityisyys</h2>
             <p>
               Lyriikkarenki lähettää tekoälylle vain sen rivin, jossa kursori on tai josta olet tehnyt valinnan.
               Tekstejä ei tallenneta pysyvästi mihinkään.
@@ -596,16 +616,6 @@ const getLineAt = (text, caretEnd) => {
   const nextNL = text.indexOf("\n", caret);
   const lineEnd = nextNL === -1 ? text.length : nextNL;
   return text.slice(lineStart, lineEnd); // ei trimmiä
-};
-
-// Palauta kursoria edeltävä sana nykyiseltä riviltä
-const getWordBeforeCaret = (text, caretEnd) => {
-  const caret = Math.max(0, Math.min(text.length, typeof caretEnd === "number" ? caretEnd : text.length));
-  const lineStart = text.lastIndexOf("\n", Math.max(0, caret - 1)) + 1;
-  const before = text.slice(lineStart, caret);
-  // sallii suomen ääkköset, laajemmat latinalaiset, heittomerkin ja yhdysviivan
-  const m = before.match(/([A-Za-zÅÄÖåäöÀ-ÖØ-öø-ÿ'\-]+)\s*$/u);
-  return m ? m[1] : "";
 };
 
 // EHDOTA-nappulan builderi
