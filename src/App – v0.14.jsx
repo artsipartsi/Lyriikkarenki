@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.15 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.14 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -102,8 +102,14 @@ export default function App() {
     if (!el) return "";
     const start = el.selectionStart ?? 0;
     const end = el.selectionEnd ?? 0;
-    if (start !== end) return authorText.slice(start, end);
-    return getLineAt(authorText, end);
+    if (start !== end) return authorText.slice(start, end); // ei trimmiä
+
+    const text = authorText;
+    const caret = end ?? 0; // käytä selectionEnd
+    const lineStart = text.lastIndexOf("\n", Math.max(0, caret - 1)) + 1;
+    const nextNL = text.indexOf("\n", caret);
+    const lineEnd = nextNL === -1 ? text.length : nextNL;
+    return text.slice(lineStart, lineEnd); // ei trimmiä
   };
 
   const buildPrompt = (basis) => {
@@ -257,7 +263,7 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.15 (gpt-4.1)</div>
+            <div style={versionInline}>v0.14 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -349,14 +355,13 @@ export default function App() {
             ref={authorRef}
             value={authorText}
             onChange={(e) => {
-              const textNow = e.target.value;
-              setAuthorTextWithHistory(textNow);
+              setAuthorTextWithHistory(e.target.value);
               bumpSel();
 
-              // Käytä UUTTA arvoa ja caretia -> ei katoa viimeinen merkki
+              // AUTOMAATTI: kun viimeisin sana on vähintään 4 kirjainta
+              // ja kirjoittaja pysähtyy ~2.3 s → laukaise haku
               if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
-              const caret = e.target.selectionEnd ?? textNow.length;
-              const line = getLineAt(textNow, caret);
+              const line = getCurrentLineText();
               const lw = lastWord(line);
               if (lw && lw.length >= 4) {
                 typingTimerRef.current = setTimeout(() => {
@@ -366,8 +371,7 @@ export default function App() {
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                const caret = e.currentTarget.selectionEnd ?? authorText.length;
-                const lineBeforeBreak = getLineAt(authorText, caret);
+                const lineBeforeBreak = getCurrentLineText();
                 // rivinvaihdolla lähtee aina haku, riippumatta pituudesta
                 // (synonyymit & riimit viimeisestä sanasta jos vähintään 1 sana;
                 //  kielikuvat koko rivistä jos vähintään 2 sanaa)
@@ -490,15 +494,6 @@ function useMediaQuery(query) {
   }, [query]);
   return match;
 }
-
-// Palauta kursorin rivin raakateksti annetusta tekstistä ja caretista
-const getLineAt = (text, caretEnd) => {
-  const caret = typeof caretEnd === "number" ? caretEnd : text.length;
-  const lineStart = text.lastIndexOf("\n", Math.max(0, caret - 1)) + 1;
-  const nextNL = text.indexOf("\n", caret);
-  const lineEnd = nextNL === -1 ? text.length : nextNL;
-  return text.slice(lineStart, lineEnd); // ei trimmiä
-};
 
 /* ---------------- styles ---------------- */
 
