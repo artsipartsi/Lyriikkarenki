@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.11 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.10 (Help-overlay + auto-scroll Ehdotukset)
  */
 
 export default function App() {
@@ -10,7 +10,7 @@ export default function App() {
     const saved = localStorage.getItem("lr_showSettings");
     return saved ? saved === "true" : true;
   });
-  const [showHelp, setShowHelp] = useState(false); // käyttöohje-ikkuna
+  const [showHelp, setShowHelp] = useState(false); // <-- UUSI: käyttöohje-ikkuna
 
   // --- Kehittäjätila (backdoor) ---
   const qs = new URLSearchParams(window.location.search);
@@ -29,7 +29,9 @@ export default function App() {
   }, []);
 
   // --- Valinnat (persist) ---
-  // Kielikuvat, synonyymit ja riimit ovat tästä versiosta alkaen AINA päällä → ei checkboxeja
+  const [wantMetaphors, setWantMetaphors] = useState(() => lsBool("lr_metaphors", true));
+  const [wantSynonyms, setWantSynonyms] = useState(() => lsBool("lr_synonyms", true));
+  const [wantRhymes, setWantRhymes] = useState(() => lsBool("lr_rhymes", true));
   const [wildness, setWildness] = useState(() => {
     const s = localStorage.getItem("lr_wildness");
     return s ? Number(s) : 0.7;
@@ -37,6 +39,9 @@ export default function App() {
   const [freeform, setFreeform] = useState(() => localStorage.getItem("lr_freeform") || "");
 
   useEffect(() => localStorage.setItem("lr_showSettings", String(showSettings)), [showSettings]);
+  useEffect(() => localStorage.setItem("lr_metaphors", String(wantMetaphors)), [wantMetaphors]);
+  useEffect(() => localStorage.setItem("lr_synonyms", String(wantSynonyms)), [wantSynonyms]);
+  useEffect(() => localStorage.setItem("lr_rhymes", String(wantRhymes)), [wantRhymes]);
   useEffect(() => localStorage.setItem("lr_wildness", String(wildness)), [wildness]);
   useEffect(() => localStorage.setItem("lr_freeform", freeform), [freeform]);
 
@@ -115,8 +120,9 @@ export default function App() {
   const buildPrompt = (basis) => {
     let p = `Teksti analysoitavaksi:\n"${basis}"\n\n`;
     const wants = [];
-    // AINA päällä
-    wants.push("kielikuvia", "synonyymejä", "riimiehdotuksia");
+    if (wantMetaphors) wants.push("kielikuvia");
+    if (wantSynonyms) wants.push("synonyymejä");
+    if (wantRhymes) wants.push("riimiehdotuksia");
     if (wants.length) p += `Sisällytä: ${wants.join(", ")}.\n`;
     if (freeform.trim()) p += `Lisäohje: ${freeform.trim()}\n`;
     return p;
@@ -132,7 +138,7 @@ export default function App() {
   useEffect(() => {
     refreshPromptPreview();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [devMode, authorText, wildness, freeform, selTick]);
+  }, [devMode, authorText, wantMetaphors, wantSynonyms, wantRhymes, wildness, freeform, selTick]);
 
   const askSuggestions = async () => {
     const basis = getSelectionOrCurrentLine();
@@ -153,6 +159,10 @@ export default function App() {
       const data = await r.json();
       const content = (data?.content || "").trim();
       if (!content) throw new Error("Tyhjä vastaus.");
+/*
+      const usedModel = data?.model; // "gpt-4o-mini" tms.
+      setRenkiText((prev) => prev + `---------------\n${content}\n${usedModel}\n`);
+ */
       setRenkiText((prev) => prev + `---------------\n${content}\n`);
     } catch (e) {
       setError(e.message || String(e));
@@ -213,7 +223,7 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.11 (gpt-4.1)</div>
+            <div style={versionInline}>v0.10 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -244,9 +254,34 @@ export default function App() {
       {/* Settings card */}
       {showSettings && (
         <section ref={settingsRef} style={card}>
-          {/* Checkboxit poistettu – MET/SYN/RHY aina päällä */}
+          <div style={checksRow}>
+            <label style={checkStyle}>
+              <input
+                type="checkbox"
+                checked={wantMetaphors}
+                onChange={(e) => setWantMetaphors(e.target.checked)}
+              />
+              &nbsp;kielikuvia
+            </label>
+            <label style={checkStyle}>
+              <input
+                type="checkbox"
+                checked={wantSynonyms}
+                onChange={(e) => setWantSynonyms(e.target.checked)}
+              />
+              &nbsp;synonyymejä
+            </label>
+            <label style={checkStyle}>
+              <input
+                type="checkbox"
+                checked={wantRhymes}
+                onChange={(e) => setWantRhymes(e.target.checked)}
+              />
+              &nbsp;riimiehdotuksia
+            </label>
+          </div>
 
-          <div style={{ marginTop: 0 }}>
+          <div style={{ marginTop: 12 }}>
             <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
               Vapaamuotoinen ohje tekoälylle
             </label>
@@ -386,7 +421,8 @@ export default function App() {
             <ol>
               <li>Kirjoita tai liitä teksti <strong>Sanoitus</strong>-ikkunaan.</li>
               <li>Valitse tekstistä pätkä – tai jätä pelkkä kursori riville.</li>
-              <li>(Valinnaista) Anna <strong>Vapaamuotoinen ohje</strong> (esim. “melankolinen, 8 tavua/rivi”).</li>
+              <li>Valitse asetuksista, haluatko kielikuvia, synonyymejä ja/tai riimejä.</li>
+              <li>Tarvittaessa anna <strong>Vapaamuotoinen ohje</strong> (esim. “melankolinen, 8 tavua/rivi”).</li>
               <li>Paina <strong>Ehdota</strong>. Ehdotukset ilmestyvät oikealle ja skrollaavat näkyviin.</li>
             </ol>
 
@@ -488,6 +524,8 @@ const toolbarCard = {
   flexWrap: "wrap",
 };
 
+const checksRow = { display: "flex", flexWrap: "wrap", gap: 16 };
+
 const paneCard = {
   background: "white",
   border: "1px solid #eee",
@@ -524,6 +562,8 @@ const textareaFill = (minPx) => ({
   flex: 1,
   minHeight: minPx,
 });
+
+const checkStyle = { userSelect: "none" };
 
 const btnStyle = {
   padding: "8px 12px",
