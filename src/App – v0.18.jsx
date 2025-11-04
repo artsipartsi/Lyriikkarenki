@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.19 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.18 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -124,7 +124,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
   const refreshPromptPreview = (basisArg) => {
     if (!devMode) return;
     const basis = basisArg ?? getSelectionOrCurrentLine();
-    setPromptPreview(buildPromptSmart(basis || "<ei valintaa / kursoririvi tyhjä>"));
+    setPromptPreview(buildPrompt(basis || "<ei valintaa / kursoririvi tyhjä>"));
   };
   useEffect(() => {
     refreshPromptPreview();
@@ -137,16 +137,13 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
   const lastWord = (s) => (s.trim() ? s.trim().split(/\s+/).pop() : "");
 
   const buildPromptSmart = (line) => {
-    const txt = line ?? "";
-    const wc = wordCount(txt.trim());
-    const lw = lastWord(txt.trim());
-    let p = `Teksti analysoitavaksi:\n"${txt}"\n\n`;
-    if (wc >= 1 && lw) {
-      p += `Keksi synonyymejä ja riimiehdotuksia tekstin viimeisestä sanasta: "${lw}".\n`;
-    }
-    if (wc >= 2) {
-      p += `Keksi kielikuvia koko tekstistä.\n`;
-    }
+    const lw = lastWord(line.trimEnd());
+    const wc = wordCount(line.trim());
+    let p = `Teksti analysoitavaksi:\n"${line.trim()}"\n\n`;
+    const parts = [];
+    if (lw) parts.push(`synonyymejä ja riimiehdotuksia sanalle "${lw}"`);
+    if (wc >= 2) parts.push(`kielikuvia koko rivin perusteella`);
+    if (parts.length) p += `Sisällytä: ${parts.join(", ")}.\n`;
     if (freeform.trim()) p += `Lisäohje: ${freeform.trim()}\n`;
     return p;
   };
@@ -265,7 +262,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.19 (gpt-4.1)</div>
+            <div style={versionInline}>v0.18 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
