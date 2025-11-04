@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.24 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.23 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -139,11 +139,10 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
   // Kehittäjätilan prompt-esikatselu
   const [promptPreview, setPromptPreview] = useState("");
-  const refreshPromptPreview = (basisArg, mode = "smart") => {
+  const refreshPromptPreview = (basisArg) => {
     if (!devMode) return;
     const basis = basisArg ?? getSelectionOrCurrentLine();
-    const builder = mode === "selected" ? buildPromptSelected : buildPromptSmart;
-    setPromptPreview(builder(basis || "<ei valintaa / kursoririvi tyhjä>"));
+    setPromptPreview(buildPromptSmart(basis || "<ei valintaa / kursoririvi tyhjä>"));
   };
   useEffect(() => {
     refreshPromptPreview();
@@ -209,7 +208,9 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
     setError("");
     setLoading(true);
     try {
-      const prompt = buildPromptSelected(sel); // ← EHDOTA käyttää tätä
+      // HUOM: Tämä on EHDOTA-napin oma promptti
+      let prompt = `Keksi synonyymejä, riimiehdotuksia ja kielikuvia valitusta tekstistä:\n"${sel}"\n`;
+      if (freeform.trim()) prompt += `\nLisäohje: ${freeform.trim()}\n`;
 
       const r = await fetch("/api/chat", {
         method: "POST",
@@ -287,7 +288,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.24 (gpt-4.1)</div>
+            <div style={versionInline}>v0.23 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -541,13 +542,6 @@ const getLineAt = (text, caretEnd) => {
   const nextNL = text.indexOf("\n", caret);
   const lineEnd = nextNL === -1 ? text.length : nextNL;
   return text.slice(lineStart, lineEnd); // ei trimmiä
-};
-
-// EHDOTA-nappulan builderi
-const buildPromptSelected = (sel) => {
-  let p = `Keksi synonyymejä, riimiehdotuksia ja kielikuvia valitusta tekstistä:\n"${sel}"\n`;
-  if (freeform.trim()) p += `\nLisäohje: ${freeform.trim()}\n`;
-  return p;
 };
 
 /* ---------------- styles ---------------- */
