@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.26 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.27 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -297,7 +297,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.26 (gpt-4.1)</div>
+            <div style={versionInline}>v0.27 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -498,32 +498,85 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
             <h1 style={{ marginTop: 0, marginBottom: 8 }}>Lyriikkarenki – käyttöohje</h1>
             <p style={{ marginTop: 0, color: "#6b7280" }}>
-              Toimii kaikenkokoisilla laitteilla kännykästä läppäriin ja isoon ruutuun.
+              Lyriikkarenki auttaa sanoittajaa tuottamaan <strong>synonyymejä</strong>,
+              <strong> riimiehdotuksia</strong> ja <strong>kielikuvia</strong> kirjoittamasi tekstin pohjalta.
             </p>
 
-            <h3>Mitä teen ensin?</h3>
+            <h2>1. Peruskäyttö</h2>
             <ol>
-              <li>Kirjoita tai liitä teksti <strong>Sanoitus</strong>-ikkunaan.</li>
-              <li>Valitse tekstistä pätkä – tai jätä pelkkä kursori riville.</li>
-              <li>(Valinnaista) Anna <strong>Vapaamuotoinen ohje</strong> (esim. “melankolinen, 8 tavua/rivi”).</li>
-              <li>Paina <strong>Ehdota</strong>. Ehdotukset ilmestyvät oikealle ja skrollaavat näkyviin.</li>
+              <li>
+                Kirjoita tai liitä teksti <strong>Sanoitus</strong>-kenttään vasemmalla.
+              </li>
+              <li>
+                Jätä kursori rivin loppuun – tai valitse osa tekstistä, jos haluat hakea vain siitä.
+              </li>
+              <li>
+                Odota hetki: kun et kirjoita n. <strong>3 sekuntiin</strong>, tekoäly hakee automaattisesti ehdotuksia.
+              </li>
+              <li>
+                Ehdotukset ilmestyvät oikeanpuoleiseen <strong>Ehdotukset</strong>-ikkunaan ja skrollaavat automaattisesti näkyviin.
+              </li>
+              <li>
+                Voit myös painaa <strong>Ehdota valitusta tekstistä</strong> -painiketta manuaalisesti.
+              </li>
             </ol>
 
-            <h3>Vinkkejä</h3>
+            <h2>2. Rivinvaihdon logiikka</h2>
             <ul>
-              <li><em>Valinta voittaa kursorin:</em> jos valitset tekstiä, analyysi tehdään siitä.</li>
-              <li><em>Villiyden säätö:</em> nosta arvoa, kun haluat rohkeampia ideoita.</li>
-              <li><em>Puhdas pöytä:</em> paina “Tyhjennä” Ehdotukset-otsikon vierestä.</li>
+              <li>
+                Jos olet jo saanut automaattisen haun rivin lopusta (tauko 3 s) ja painat Enteriä vain
+                siirtyäksesi seuraavalle riville, <strong>uutta hakua ei tehdä</strong>.
+              </li>
+              <li>
+                Enter laukaisee haun vain, jos kirjoitat uutta tekstiä riville, jota ei ole vielä haettu.
+              </li>
             </ul>
 
-            <h3>Tekstieditorin perustoiminnot</h3>
+            <h2>3. Asetukset ⚙</h2>
+            <ul>
+              <li>
+                Avaa asetukset oikean yläkulman <strong>⚙</strong>-painikkeesta.
+              </li>
+              <li>
+                Kirjoita halutessasi <strong>vapaamuotoinen ohje tekoälylle</strong> — esim.:
+                <em> “sävy melankolinen”, “vältä anglismeja”, “8 tavua per rivi”</em>.
+              </li>
+              <li>
+                Lennokkuus (0–1) säätää kielen rohkeutta ja mielikuvituksellisuutta.
+              </li>
+              <li>
+                Kielikuvat, synonyymit ja riimit ovat aina aktiivisia, joten niitä ei tarvitse erikseen valita.
+              </li>
+            </ul>
+
+            <h2>4. Ehdotusten hallinta</h2>
+            <ul>
+              <li>
+                Ehdotukset näkyvät aikajärjestyksessä, ja jokaisen haun väliin tulee katkoviiva.
+              </li>
+              <li>
+                Paina “<strong>Tyhjennä</strong>” poistaaksesi kaikki ehdotukset.
+              </li>
+              <li>
+                Kopioi ehdotuksia tekstieditoriin valitsemalla ja liittämällä manuaalisesti.
+              </li>
+            </ul>
+
+            <h2>5. Vinkkejä ja pikanäppäimiä</h2>
+            <ul>
+              <li><kbd>Ctrl + Z</kbd> tai <kbd>Cmd + Z</kbd> – Peruuta viimeisin muutos</li>
+              <li><kbd>Ctrl + Y</kbd> tai <kbd>Cmd + Shift + Z</kbd> – Tee uudestaan</li>
+              <li><kbd>Esc</kbd> – Sulje tämä ohje</li>
+              <li><kbd>Ctrl + Alt + D</kbd> – Avaa kehittäjätila (näyttää tekoälylle lähetetyt promptit)</li>
+            </ul>
+
+            <h2>6. Automaattihaku ja yksityisyys</h2>
             <p>
-              <strong>Vapaamuotoinen ohje</strong>- ja <strong>Sanoitus</strong>-ikkunoissa toimivat tutut
-              komennot: Valitse kaikki, Poista, Peru, Tee uudelleen, Kopioi, Leikkaa, Liitä…
-              (Näppäinyhdistelmät vaihtelevat laitteesta riippuen.)
+              Lyriikkarenki lähettää tekoälylle vain sen rivin, jossa kursori on tai josta olet tehnyt valinnan.
+              Tekstejä ei tallenneta pysyvästi mihinkään.
             </p>
 
-            <p style={{ color: "#6b7280", fontSize: 12, marginTop: 24 }}>
+            <p style={{ fontSize: 12, color: "#6b7280", marginTop: 24 }}>
               Sulje ohje painamalla ✕ tai Esc.
             </p>
           </div>
