@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.15 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.16 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -168,7 +168,7 @@ export default function App() {
       setError(e.message || String(e));
     } finally {
       setLoading(false);
-      refreshPromptPreview?.();
+      setTimeout(refreshPromptPreview, 100); // pieni viive, estää viimeisen kirjaimen puuttumisen
     }
   };
 
@@ -257,7 +257,7 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.15 (gpt-4.1)</div>
+            <div style={versionInline}>v0.16 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
