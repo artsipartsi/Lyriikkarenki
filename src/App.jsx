@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.16 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.17 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -18,6 +18,9 @@ export default function App() {
   const initialDev =
     devParam === "1" ? true : devParam === "0" ? false : localStorage.getItem("lr_dev") === "true";
   const [devMode, setDevMode] = useState(initialDev);
+  // --- DEV/prompt-esikatselua varten ---
+const [lastPromptBasis, setLastPromptBasis] = useState("");
+
   useEffect(() => localStorage.setItem("lr_dev", String(devMode)), [devMode]);
   useEffect(() => {
     const onKey = (e) => {
@@ -120,7 +123,7 @@ export default function App() {
   const [promptPreview, setPromptPreview] = useState("");
   const refreshPromptPreview = () => {
     if (!devMode) return;
-    const basis = getSelectionOrCurrentLine();
+    const basis = basisArg ?? getSelectionOrCurrentLine();
     setPromptPreview(buildPrompt(basis || "<ei valintaa / kursoririvi tyhjä>"));
   };
   useEffect(() => {
@@ -154,6 +157,7 @@ export default function App() {
     setLoading(true);
     try {
       const prompt = buildPromptSmart(line);
+      setLastPromptBasis(line);              // talteen mahdollisia dev-käyttöjä varten
       const r = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -168,7 +172,8 @@ export default function App() {
       setError(e.message || String(e));
     } finally {
       setLoading(false);
-      setTimeout(refreshPromptPreview, 100); // pieni viive, estää viimeisen kirjaimen puuttumisen
+      // Näytä esikatselussa TÄSMÄLLEEN sama rivi, joka lähetettiin API:lle
+      refreshPromptPreview?.(line);
     }
   };
 
@@ -257,7 +262,7 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.16 (gpt-4.1)</div>
+            <div style={versionInline}>v0.17 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
