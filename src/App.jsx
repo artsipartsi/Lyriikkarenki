@@ -134,6 +134,50 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [devMode, authorText, wildness, freeform, selTick]);
 
+  const getCurrentLineText = () => getSelectionOrCurrentLine();
+
+  const wordCount = (s) => (s.trim() ? s.trim().split(/\s+/).length : 0);
+  const lastWord = (s) => (s.trim() ? s.trim().split(/\s+/).pop() : "");
+
+  const buildPromptSmart = (line) => {
+    const lw = lastWord(line);
+    const wc = wordCount(line);
+    let p = `Teksti analysoitavaksi:\n"${line.trim()}"\n\n`;
+    const parts = [];
+    if (lw) parts.push(`synonyymejä ja riimiehdotuksia sanalle "${lw}"`);
+    if (wc >= 2) parts.push(`kielikuvia koko rivin perusteella`);
+    if (parts.length) p += `Sisällytä: ${parts.join(", ")}.\n`;
+    if (freeform.trim()) p += `Lisäohje: ${freeform.trim()}\n`;
+    return p;
+  };
+
+  const askSmartSuggestions = async (line, reason = "auto") => {
+    const sig = `${reason}|${line.trim()}`;
+    if (!line.trim() || sig === lastAutoSig) return; // estä duplikaatit
+    setLastAutoSig(sig);
+
+    setError("");
+    setLoading(true);
+    try {
+      const prompt = buildPromptSmart(line);
+      const r = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, temperature: 1.0 }), // villiys aina maksimi
+      });
+      if (!r.ok) throw new Error(`API-virhe ${r.status}: ${await r.text()}`);
+      const data = await r.json();
+      const content = (data?.content || "").trim();
+      if (!content) throw new Error("Tyhjä vastaus.");
+      setRenkiText((prev) => prev + `---------------\n${content}\n`);
+    } catch (e) {
+      setError(e.message || String(e));
+    } finally {
+      setLoading(false);
+      refreshPromptPreview?.();
+    }
+  };
+
   const askSuggestions = async () => {
     const basis = getSelectionOrCurrentLine();
     if (!basis) {
@@ -194,6 +238,12 @@ export default function App() {
     const available = Math.max(0, Math.floor(vh - hdr - set - tlb - ftr - chrome));
     setPaneAreaHeight(available);
   };
+
+  // --- Autohaku ---
+  const typingTimerRef = useRef(null);
+  const AUTO_DELAY_MS = 2300; // ~2–3 s tauko
+  const [lastAutoSig, setLastAutoSig] = useState("");
+
 
   useEffect(() => {
     recalcPaneHeight();
@@ -307,7 +357,30 @@ export default function App() {
             onChange={(e) => {
               setAuthorTextWithHistory(e.target.value);
               bumpSel();
+
+              // AUTOMAATTI: kun rivillä on ≥4-kirjaiminen sana ja sen jälkeen välilyönti,
+              // ja kirjoittaja pysähtyy ~2.3 s → laukaise haku
+              if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+              const line = getCurrentLineText();
+              const endsWithSpace = /\s$/.test(line);
+              const lw = lastWord(line);
+              if (endsWithSpace && lw && lw.length >= 4) {
+                typingTimerRef.current = setTimeout(() => {
+                  // välilyönti poistetaan ennen lähetystä
+                  askSmartSuggestions(line.trimEnd(), "pause");
+                }, AUTO_DELAY_MS);
+              }
             }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const lineBeforeBreak = getCurrentLineText();
+                // rivinvaihdolla lähtee aina haku, riippumatta pituudesta
+                // (synonyymit & riimit viimeisestä sanasta jos vähintään 1 sana;
+                //  kielikuvat koko rivistä jos vähintään 2 sanaa)
+                setTimeout(() => askSmartSuggestions(lineBeforeBreak, "enter"), 0);
+              }
+            }}
+
             onSelect={bumpSel}
             onKeyUp={bumpSel}
             onMouseUp={bumpSel}
