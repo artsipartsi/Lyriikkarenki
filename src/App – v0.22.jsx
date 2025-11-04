@@ -750,6 +750,16 @@ const toolbarWrap = {
   gap: 12,
 };
 
+// Lähes näkymätön nappi, kun valintaa ei ole
+const disabledBtn = {
+  ...primaryBtn,
+  background: "transparent",
+  color: "#d1d5db",
+  borderColor: "#f3f4f6",
+  cursor: "default",
+};
+
+
 /* -------- HELP OVERLAY styles -------- */
 
 const helpOverlay = {
