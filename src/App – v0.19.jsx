@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.20 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.19 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -109,24 +109,6 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
     return getLineAt(authorText, end);
   };
 
-  // Palauta valinnan teksti tai tyhjä
-  const getSelectedText = () => {
-    const el = authorRef.current;
-    if (!el) return "";
-    const start = el.selectionStart ?? 0;
-    const end = el.selectionEnd ?? 0;
-    return start !== end ? authorText.slice(start, end) : "";
-  };
-
-  // Onko valintaa?
-  const hasSelection = () => {
-    const el = authorRef.current;
-    if (!el) return false;
-    const start = el.selectionStart ?? 0;
-    const end = el.selectionEnd ?? 0;
-    return end > start;
-  };
-
   const buildPrompt = (basis) => {
     let p = `Teksti analysoitavaksi:\n"${basis}"\n\n`;
     const wants = [];
@@ -160,7 +142,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
     const lw = lastWord(txt.trim());
     let p = `Teksti analysoitavaksi:\n"${txt}"\n\n`;
     if (wc >= 1 && lw) {
-      p += `Keksi synonyymejä ja riimiehdotuksia sanasta: "${lw}".\n`;
+      p += `Keksi synonyymejä ja riimiehdotuksia tekstin viimeisestä sanasta: "${lw}".\n`;
     }
     if (wc >= 2) {
       p += `Keksi kielikuvia koko tekstistä.\n`;
@@ -199,18 +181,15 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
   };
 
   const askSuggestions = async () => {
-    const sel = getSelectedText();
-    if (!sel) {
-      setError("Valitse teksti, josta haluat ehdotuksia.");
+    const basis = getSelectionOrCurrentLine();
+    if (!basis) {
+      setError("Valitse tekstiä tai siirrä kursori riville, josta haluat ehdotuksia.");
       return;
     }
     setError("");
     setLoading(true);
     try {
-      // Uusi promptti valitulle tekstille
-      let prompt = `Keksi synonyymejä, riimiehdotuksia ja kielikuvia valitusta tekstistä:\n"${sel}"\n`;
-      if (freeform.trim()) prompt += `\nLisäohje: ${freeform.trim()}\n`;
-
+      const prompt = buildPrompt(basis);
       const r = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -225,8 +204,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
       setError(e.message || String(e));
     } finally {
       setLoading(false);
-      // (valinnainen) päivitä esikatselu samaan tekstiin
-      refreshPromptPreview?.(sel);
+      refreshPromptPreview();
     }
   };
 
@@ -287,7 +265,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.20 (gpt-4.1)</div>
+            <div style={versionInline}>v0.19 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -357,15 +335,11 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
       {/* Action bar */}
       <section ref={toolbarRef} style={toolbarCard}>
-        <button
-          onClick={askSuggestions}
-          disabled={loading || !hasSelection()}
-          style={loading ? loadingBtn : primaryBtn}
-        >
-          {loading ? "Haetaan..." : "Ehdota valitusta tekstistä"}
+        <button onClick={askSuggestions} disabled={loading} style={primaryBtn}>
+          {loading ? "Haetaan..." : "Ehdota"}
         </button>
         <span style={{ color: "#6b7280", fontSize: 12 }}>
-          Vihje: Haku tehdään valitun tekstin perusteella
+          Vihje: Käytetään valittua tekstiä tai jos mitään ei ole valittu, niin käytetään kursorin riviä.
         </span>
       </section>
 
@@ -635,14 +609,6 @@ const primaryBtn = {
   background: "#111827",
   color: "white",
   borderColor: "#111827",
-};
-
-const loadingBtn = {
-  ...primaryBtn,
-  background: "#d97706", // kirkas oranssi / keltainen
-  borderColor: "#d97706",
-  cursor: "wait",
-  transition: "background 0.2s ease",
 };
 
 const iconBtn = {
