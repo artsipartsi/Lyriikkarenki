@@ -208,9 +208,10 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
     setError("");
     setLoading(true);
+    let prompt = "";
     try {
       // HUOM: Tämä on EHDOTA-napin oma promptti
-      let prompt = `Keksi synonyymejä, riimiehdotuksia ja kielikuvia valitusta tekstistä:\n"${sel}"\n`;
+      prompt = `Keksi synonyymejä, riimiehdotuksia ja kielikuvia valitusta tekstistä:\n"${sel}"\n`;
       if (freeform.trim()) prompt += `\nLisäohje: ${freeform.trim()}\n`;
 
       const r = await fetch("/api/chat", {
@@ -227,8 +228,8 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
       setError(e.message || String(e));
     } finally {
       setLoading(false);
-      // (valinnainen) näytä esikatselussa sama basis kuin API:lle
-      refreshPromptPreview?.(sel);
+      // Näytä esikatselussa TÄSMÄLLEEN sama promptti kuin API:lle
+      if (devMode) setPromptPreview(prompt);
     }
   };
 
