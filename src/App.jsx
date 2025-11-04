@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.22 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.23 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -204,10 +204,11 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
       setError("Valitse teksti, josta haluat ehdotuksia.");
       return;
     }
+
     setError("");
     setLoading(true);
     try {
-      // Uusi promptti valitulle tekstille
+      // HUOM: Tämä on EHDOTA-napin oma promptti
       let prompt = `Keksi synonyymejä, riimiehdotuksia ja kielikuvia valitusta tekstistä:\n"${sel}"\n`;
       if (freeform.trim()) prompt += `\nLisäohje: ${freeform.trim()}\n`;
 
@@ -225,7 +226,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
       setError(e.message || String(e));
     } finally {
       setLoading(false);
-      // (valinnainen) päivitä esikatselu samaan tekstiin
+      // (valinnainen) näytä esikatselussa sama basis kuin API:lle
       refreshPromptPreview?.(sel);
     }
   };
@@ -287,7 +288,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.22 (gpt-4.1)</div>
+            <div style={versionInline}>v0.23 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
