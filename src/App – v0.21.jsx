@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.22 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.21 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -287,7 +287,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.22 (gpt-4.1)</div>
+            <div style={versionInline}>v0.21 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -363,7 +363,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
           disabled={!hasSelection() || loading}
           style={hasSelection() ? primaryBtn : disabledBtn}
         >
-        Ehdota valitusta tekstistä"
+          {hasSelection() ? "Ehdota valitusta tekstistä" : ""}
         </button>
 
         {/* Automaattisen haun indikaattori (näkyy myös kun nappia ei paineta) */}
@@ -644,15 +644,6 @@ const primaryBtn = {
   background: "#111827",
   color: "white",
   borderColor: "#111827",
-};
-
-// näkyvä harmaa versio (kun ei valintaa)
-const disabledBtn = {
-  ...btnStyle,
-  background: "#e5e7eb",
-  color: "#6b7280",
-  borderColor: "#d1d5db",
-  cursor: "default",
 };
 
 const loadingBtn = {
