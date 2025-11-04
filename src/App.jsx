@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.24 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.25 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -257,12 +257,10 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
   const recalcPaneHeight = () => {
     const vh = window.innerHeight || document.documentElement.clientHeight;
     const hdr = headerRef.current?.getBoundingClientRect()?.height || 0;
-    const set = settingsRef.current?.getBoundingClientRect()?.height || 0;
     const tlb = toolbarRef.current?.getBoundingClientRect()?.height || 0;
     const ftr = footerRef.current?.getBoundingClientRect()?.height || 0;
-
-    const chrome = 32 + 12 + 8;
-    const available = Math.max(0, Math.floor(vh - hdr - set - tlb - ftr - chrome));
+    const chrome = 32 + 12 + 8; // marginaaleihin pientä “chrome”-varaa
+    const available = Math.max(0, Math.floor(vh - hdr - tlb - ftr - chrome));
     setPaneAreaHeight(available);
   };
 
@@ -278,7 +276,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showSettings, isWide]);
+  }, [isWide]);
 
   // --- Render ---
   return (
@@ -289,8 +287,20 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
           <div /> {/* vasen täytesarake */}
 
           <div style={titleRowCentered}>
+            {/* Logo – nuotti ja rengas */}
+            <div style={logoMark} aria-hidden="true">
+              <svg viewBox="0 0 48 48" width="26" height="26">
+                <circle cx="24" cy="24" r="22" fill="#111827" />
+                <path
+                  d="M16 29c3-3 8-3 11 0v-9h5v-3h-8v12c-2-2-5-2-8 0z"
+                  fill="#facc15"
+                />
+              </svg>
+            </div>
+
+            {/* Sovelluksen nimi */}
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.24 (gpt-4.1)</div>
+            <div style={versionInline}>v0.23 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -706,12 +716,27 @@ const titleRowCentered = {
   textAlign: "center",
 };
 
+// Logo-merkki otsikon vasemmalle puolelle
+const logoMark = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 34,
+  height: 34,
+  borderRadius: "50%",
+  background: "linear-gradient(135deg,#111827,#1f2937)",
+  boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
+  marginRight: 8,
+};
+
 const titleStyle = {
-  fontSize: 22,
-  fontWeight: 800,
-  letterSpacing: 0.2,
+  fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif",
+  fontSize: 24,
+  fontWeight: 700,
+  letterSpacing: "0.03em",
   margin: 0,
-  lineHeight: 1.05,
+  lineHeight: 1.1,
+  color: "#111827",
 };
 
 const versionInline = {
