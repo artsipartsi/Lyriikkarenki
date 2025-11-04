@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.24 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.26 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -83,6 +83,9 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
   // --- Ref ---
   const authorRef = useRef(null);
   const renkiRef = useRef(null); // auto-scroll
+
+  // Muistaa viimeisimmän "taukoautohaku (pause)" -rivin ja ajan
+  const lastPauseRef = useRef({ line: "", at: 0 });
 
   // --- Layout (responsiivinen sarake/rinnakkain) ---
   const isWide = useMediaQuery("(min-width: 900px)");
@@ -174,6 +177,10 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
     const sig = `${reason}|${line.trim()}`;
     if (!line.trim() || sig === lastAutoSig) return; // estä duplikaatit
     setLastAutoSig(sig);
+
+    if (reason === "pause") {
+      lastPauseRef.current = { line: (line || "").trim(), at: Date.now() };
+    }
 
     setError("");
     setLoading(true);
@@ -290,7 +297,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.24 (gpt-4.1)</div>
+            <div style={versionInline}>v0.26 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -395,6 +402,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
             ref={authorRef}
             value={authorText}
             onChange={(e) => {
+              lastPauseRef.current = { line: "", at: 0 };
               const textNow = e.target.value;
               setAuthorTextWithHistory(textNow);
               bumpSel();
@@ -414,9 +422,20 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
               if (e.key === "Enter") {
                 const caret = e.currentTarget.selectionEnd ?? authorText.length;
                 const lineBeforeBreak = getLineAt(authorText, caret);
-                // rivinvaihdolla lähtee aina haku, riippumatta pituudesta
-                // (synonyymit & riimit viimeisestä sanasta jos vähintään 1 sana;
-                //  kielikuvat koko rivistä jos vähintään 2 sanaa)
+                const lineTrim = (lineBeforeBreak || "").trim();
+
+                // Estä enter-haku, jos samasta rivistä tehtiin juuri "pause"-autohaku
+                const { line, at } = lastPauseRef.current || {};
+                const RECENT_MS = 60_000; // salli Enter-haku vasta 60 s jälkeen tai kun rivi muuttuu
+                const justPausedSameLine =
+                  line && line === lineTrim && Date.now() - at < RECENT_MS;
+
+                if (justPausedSameLine) {
+                  // ei hakua – käyttäjä vain teki rivinvaihdon aiemmin autohakuiltuun riviin
+                  return;
+                }
+
+                // Muuten tee normaali enter-haku (välitön)
                 setTimeout(() => askSmartSuggestions(lineBeforeBreak, "enter"), 0);
               }
             }}
@@ -707,8 +726,8 @@ const titleRowCentered = {
 };
 
 const titleStyle = {
-  fontSize: 22,
-  fontWeight: 800,
+  fontSize: 24,
+  fontWeight: 900,
   letterSpacing: 0.2,
   margin: 0,
   lineHeight: 1.05,
