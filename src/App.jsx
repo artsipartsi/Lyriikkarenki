@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.13 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.14 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -102,14 +102,14 @@ export default function App() {
     if (!el) return "";
     const start = el.selectionStart ?? 0;
     const end = el.selectionEnd ?? 0;
-    if (start !== end) return authorText.slice(start, end).trim();
+    if (start !== end) return authorText.slice(start, end); // ei trimmiä
 
     const text = authorText;
-    const caret = start;
+    const caret = end ?? 0; // käytä selectionEnd
     const lineStart = text.lastIndexOf("\n", Math.max(0, caret - 1)) + 1;
     const nextNL = text.indexOf("\n", caret);
     const lineEnd = nextNL === -1 ? text.length : nextNL;
-    return text.slice(lineStart, lineEnd).trim();
+    return text.slice(lineStart, lineEnd); // ei trimmiä
   };
 
   const buildPrompt = (basis) => {
@@ -140,8 +140,8 @@ export default function App() {
   const lastWord = (s) => (s.trim() ? s.trim().split(/\s+/).pop() : "");
 
   const buildPromptSmart = (line) => {
-    const lw = lastWord(line);
-    const wc = wordCount(line);
+    const lw = lastWord(line.trimEnd());
+    const wc = wordCount(line.trim());
     let p = `Teksti analysoitavaksi:\n"${line.trim()}"\n\n`;
     const parts = [];
     if (lw) parts.push(`synonyymejä ja riimiehdotuksia sanalle "${lw}"`);
@@ -263,7 +263,7 @@ export default function App() {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.13 (gpt-4.1)</div>
+            <div style={versionInline}>v0.14 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
