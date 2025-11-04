@@ -373,7 +373,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
           disabled={!hasSelection() || loading}
           style={hasSelection() ? primaryBtn : disabledBtn}
         >
-        Ehdota valitusta tekstistä
+        Ehdota valitusta tekstistä"
         </button>
 
         {/* Automaattisen haun indikaattori (näkyy myös kun nappia ei paineta) */}
