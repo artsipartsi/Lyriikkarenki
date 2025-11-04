@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.21 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.20 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -287,7 +287,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.21 (gpt-4.1)</div>
+            <div style={versionInline}>v0.20 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -356,23 +356,14 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
       )}
 
       {/* Action bar */}
-      <section ref={toolbarRef} style={toolbarWrap}>
-        {/* Manuaalinen Ehdota (vain valinnasta) */}
+      <section ref={toolbarRef} style={toolbarCard}>
         <button
           onClick={askSuggestions}
-          disabled={!hasSelection() || loading}
-          style={hasSelection() ? primaryBtn : disabledBtn}
+          disabled={loading || !hasSelection()}
+          style={loading ? loadingBtn : primaryBtn}
         >
-          {hasSelection() ? "Ehdota valitusta tekstistä" : ""}
+          {loading ? "Haetaan..." : "Ehdota valitusta tekstistä"}
         </button>
-
-        {/* Automaattisen haun indikaattori (näkyy myös kun nappia ei paineta) */}
-        {loading && (
-          <div style={loadingIndicator}>
-            Haetaan...
-          </div>
-        )}
-
         <span style={{ color: "#6b7280", fontSize: 12 }}>
           Vihje: Haku tehdään valitun tekstin perusteella
         </span>
@@ -722,34 +713,6 @@ const rangeFull = {
   marginRight: 8,
   paddingInline: 0,
 };
-
-// Haun erillinen indikaattori (näkyy vain loading === true)
-const loadingIndicator = {
-  padding: "8px 14px",
-  borderRadius: 10,
-  background: "#d97706",
-  color: "white",
-  fontWeight: 700,
-  boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
-};
-
-// Toolbarin oma wrap (käyttää card-tyyliä pohjana)
-const toolbarWrap = {
-  ...toolbarCard,
-  display: "flex",
-  alignItems: "center",
-  gap: 12,
-};
-
-// Lähes näkymätön nappi, kun valintaa ei ole
-const disabledBtn = {
-  ...primaryBtn,
-  background: "transparent",
-  color: "#d1d5db",
-  borderColor: "#f3f4f6",
-  cursor: "default",
-};
-
 
 /* -------- HELP OVERLAY styles -------- */
 
