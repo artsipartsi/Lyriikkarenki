@@ -508,7 +508,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
                 Kirjoita tai liitä teksti <strong>Sanoitus</strong>-kenttään vasemmalla.
               </li>
               <li>
-                Odota hetki: jos olet kirjoittanut vähintään nelikirjaimisen sanan ja et kirjoita n. <strong>3 sekuntiin</strong>, tekoäly hakee automaattisesti ehdotuksia. Riimiehdotukset ja synonyymit liittyvät rivin viimeiseen sanaan, kielikuvat koko riviin. Rivillä on oltava vähintään kaksi sanaa, jotta kielikuvia haettaisiin.
+                Odota hetki: jos olet kirjoittanut vähintään nelikirjaimisen sanan ja et kirjoita n. <strong>3 sekuntiin</strong>, tekoäly hakee automaattisesti ehdotuksia. Haun aikana näkyy keltapohjainen "Haetaan.."-indikaattori, mutta tekstiä voi kirjoittaa silloinkin. Riimiehdotukset ja synonyymit liittyvät rivin viimeiseen sanaan, kielikuvat koko riviin. Rivillä on oltava vähintään kaksi sanaa, jotta kielikuvia haettaisiin.
               </li>
               <li>
                 Myös rivinvaihto tekee ehdotuksia samalla systeemillä.
@@ -517,7 +517,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
                 Ehdotukset ilmestyvät oikeanpuoleiseen <strong>Ehdotukset</strong>-ikkunaan ja skrollaavat automaattisesti näkyviin.
               </li>
               <li>
-                Voit myös valita tekstiä ja painaa <strong>Ehdota valitusta tekstistä</strong> -painiketta. Riimiehdotukset ja synonyymit liittyvät tekstin viimeiseen sanaan, kielikuvat koko tekstiin.
+                Voit myös valita tekstiä ja painaa <strong>Ehdota valitusta tekstistä</strong> -painiketta. Riimiehdotukset, synonyymit ja kielikuvat liittyvät koko valittuun tekstiin.
               </li>
             </ol>
 
