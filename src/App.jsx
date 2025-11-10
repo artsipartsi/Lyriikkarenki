@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.30 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.31 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -218,6 +218,12 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
     try {
       if (sel && sel.trim()) {
         prompt = `Keksi synonyymejä, riimiehdotuksia ja kielikuvia valitusta tekstistä:\n"${sel}"\n`;
+
+        prompt += `Etsi kontekstiin sopivia, mutta monipuolisia synonyymejä sanalle: "${lw}". Mukana saa olla sekä arkisia että runollisia vaihtoehtoja, mutta vältä keinotekoisia tai olemattomia sanoja.\n`;
+        prompt += `Ehdota lisäksi sopivia riimejä sanalle "${lw}" – vain olemassa olevia suomen sanoja.\n`;
+        prompt += `Keksi tuoreita ja omaperäisiä kielikuvia koko tekstistä, vältä kliseisiä rakkaus- tai tuli-vertauskuvia. Kielikuvat voivat olla myös arkipäiväisiä, humoristisia, yllättäviä, visuaalisia ja jopa surrealistisia, kunhan ne tukevat tekstin tunnetta.\n`;
+        prompt += `Ehdota myös muita kirjoittamisen tehokeinoja (esim. toisto, kontrasti, rytmi, odotuksen rikkominen, sanaleikki).`;
+
         if (freeform.trim()) prompt += `\nLisäohje: ${freeform.trim()}\n`;
       } else {
         // 2) Muuten käytä KURSORIRIVIÄ kuten automaattihaussa
@@ -307,7 +313,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.30 (gpt-4.1)</div>
+            <div style={versionInline}>v0.31 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -381,9 +387,14 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
         <button
           onClick={askSuggestions}
           disabled={loading}
-          style={loading ? primaryBtn : disabledBtn}
+          style={{
+            ...primaryBtn,
+            cursor: loading ? "wait" : "pointer",
+            opacity: loading ? 0.7 : 1,
+          }}
+
         >
-        Ehdota (valinta tai nykyrivi))
+        Ehdota (valinta tai nykyrivi)
         </button>
 
         {/* Automaattisen haun indikaattori (näkyy myös kun nappia ei paineta) */}
