@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.30 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.29 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -164,12 +164,13 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
     const lw = lastWord(txt.trim());
     let p = `Teksti analysoitavaksi:\n"${txt}"\n\n`;
     if (wc >= 1 && lw) {
-      p += `Etsi kontekstiin sopivia, mutta monipuolisia synonyymejä sanalle: "${lw}". Mukana saa olla sekä arkisia että runollisia vaihtoehtoja, mutta vältä keinotekoisia tai olemattomia sanoja.\n`;
+      p += `Etsi kontekstiin sopivia, mutta monipuolisia synonyymejä sanalle: "${lw}". 
+      Mukana saa olla sekä arkisia että runollisia vaihtoehtoja, mutta vältä keinotekoisia tai olemattomia sanoja.\n`;
       p += `Ehdota lisäksi sopivia riimejä sanalle "${lw}" – vain olemassa olevia suomen sanoja.\n`;
     }
     if (wc >= 2) {
-      p += `Keksi tuoreita ja omaperäisiä kielikuvia koko tekstistä, vältä kliseisiä rakkaus- tai tuli-vertauskuvia. Kielikuvat voivat olla myös arkipäiväisiä, humoristisia, yllättäviä, visuaalisia ja jopa surrealistisia, kunhan ne tukevat tekstin tunnetta.\n`;
-      p += `Ehdota myös muita kirjoittamisen tehokeinoja (esim. toisto, kontrasti, rytmi, odotuksen rikkominen, sanaleikki).`;
+      p += `Keksi tuoreita ja omaperäisiä kielikuvia koko tekstistä, vältä kliseisiä rakkaus- tai tuli-vertauskuvia. 
+      Kielikuvat voivat olla myös arkipäiväisiä, humoristisia, yllättäviä, visuaalisia ja jopa surrealistisia, kunhan ne tukevat tekstin tunnetta.\n`;
     }
     if (freeform.trim()) p += `Lisäohje: ${freeform.trim()}\n`;
     return p;
@@ -209,28 +210,19 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
   };
 
   const askSuggestions = async () => {
+    const sel = getSelectedText();
+    if (!sel) {
+      setError("Valitse teksti, josta haluat ehdotuksia.");
+      return;
+    }
+
     setError("");
     setLoading(true);
-
-    // 1) Jos on valinta → käytä sitä (nykyinen logiikka)
-    const sel = getSelectedText();
     let prompt = "";
     try {
-      if (sel && sel.trim()) {
-        prompt = `Keksi synonyymejä, riimiehdotuksia ja kielikuvia valitusta tekstistä:\n"${sel}"\n`;
-        if (freeform.trim()) prompt += `\nLisäohje: ${freeform.trim()}\n`;
-      } else {
-        // 2) Muuten käytä KURSORIRIVIÄ kuten automaattihaussa
-        const basis = getSelectionOrCurrentLine()?.trim() || "";
-        if (!basis) {
-          setLoading(false);
-          setError("Kirjoita riville tekstiä tai valitse jokin jakso.");
-          return;
-        }
-        prompt = buildPromptSmart(basis);
-        // dev-esikatseluun talteen täsmälleen sama rivi
-        setLastPromptBasis(basis);
-      }
+      // HUOM: Tämä on EHDOTA-napin oma promptti
+      prompt = `Keksi synonyymejä, riimiehdotuksia ja kielikuvia valitusta tekstistä:\n"${sel}"\n`;
+      if (freeform.trim()) prompt += `\nLisäohje: ${freeform.trim()}\n`;
 
       const r = await fetch("/api/chat", {
         method: "POST",
@@ -246,6 +238,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
       setError(e.message || String(e));
     } finally {
       setLoading(false);
+      // Näytä esikatselussa TÄSMÄLLEEN sama promptti kuin API:lle
       if (devMode) setPromptPreview(prompt);
     }
   };
@@ -307,7 +300,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.30 (gpt-4.1)</div>
+            <div style={versionInline}>v0.29 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -380,10 +373,10 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
         {/* Manuaalinen Ehdota (vain valinnasta) */}
         <button
           onClick={askSuggestions}
-          disabled={loading}
-          style={loading ? primaryBtn : disabledBtn}
+          disabled={!hasSelection() || loading}
+          style={hasSelection() ? primaryBtn : disabledBtn}
         >
-        Ehdota (valinta tai nykyrivi))
+        Ehdota valitusta tekstistä
         </button>
 
         {/* Automaattisen haun indikaattori (näkyy myös kun nappia ei paineta) */}
@@ -394,7 +387,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
         )}
 
         <span style={{ color: "#6b7280", fontSize: 12 }}>
-          Vihje: Haku tehdään valinnasta tai nykyiseltä riviltä
+          Vihje: Haku tehdään valitun tekstin perusteella
         </span>
       </section>
 
@@ -527,8 +520,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
                 Ehdotukset ilmestyvät oikeanpuoleiseen <strong>Ehdotukset</strong>-ikkunaan ja skrollaavat automaattisesti näkyviin.
               </li>
               <li>
-                Voit myös valita tekstiä ja painaa <strong>Ehdota (valinta tai rivi)</strong> -painiketta. Tällöin riimiehdotukset, synonyymit ja kielikuvat liittyvät koko valittuun tekstiin.
-                Jos mitään ei ole valittuna, käsitellään kursorin rivin sisältö kuten automaattihaussa.
+                Voit myös valita tekstiä ja painaa <strong>Ehdota valitusta tekstistä</strong> -painiketta. Riimiehdotukset, synonyymit ja kielikuvat liittyvät koko valittuun tekstiin.
               </li>
             </ol>
 
