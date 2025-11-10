@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         {
           role: "system",
           content:
-            "Analysoi annettu teksti ja tee hyvin lyhyitä ehdotuksia. Älä selitä mitään. Älä käytä otsikoita. Älä käytä rivin alussa numeroita tai ranskalaisia viivoja. Palauta 1–4 ehdotusta, ilman esipuhetta.",
+            "Analysoi annettu teksti ja tee hyvin lyhyitä ehdotuksia. Älä selitä mitään. Älä käytä otsikoita. Älä käytä rivin alussa numeroita tai ranskalaisia viivoja. Palauta 3–6 ehdotusta, ilman esipuhetta.",
         },
         { role: "user", content: prompt },
       ],

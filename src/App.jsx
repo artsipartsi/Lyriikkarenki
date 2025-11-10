@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.28 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.29 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -164,10 +164,13 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
     const lw = lastWord(txt.trim());
     let p = `Teksti analysoitavaksi:\n"${txt}"\n\n`;
     if (wc >= 1 && lw) {
-      p += `Keksi synonyymejä ja riimiehdotuksia sanasta: "${lw}".\n`;
+      p += `Etsi kontekstiin sopivia, mutta monipuolisia synonyymejä sanalle: "${lw}". 
+      Mukana saa olla sekä arkisia että runollisia vaihtoehtoja, mutta vältä keinotekoisia tai olemattomia sanoja.\n`;
+      p += `Ehdota lisäksi sopivia riimejä sanalle "${lw}" – vain olemassa olevia suomen sanoja.\n`;
     }
     if (wc >= 2) {
-      p += `Keksi kielikuvia koko tekstistä.\n`;
+      p += `Keksi tuoreita ja omaperäisiä kielikuvia koko tekstistä, vältä kliseisiä rakkaus- tai tuli-vertauskuvia. 
+      Kielikuvat voivat olla myös arkipäiväisiä, humoristisia, yllättäviä, visuaalisia ja jopa surrealistisia, kunhan ne tukevat tekstin tunnetta.\n`;
     }
     if (freeform.trim()) p += `Lisäohje: ${freeform.trim()}\n`;
     return p;
@@ -297,7 +300,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.28 (gpt-4.1)</div>
+            <div style={versionInline}>v0.29 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
