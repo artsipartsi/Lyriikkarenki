@@ -217,11 +217,9 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
     let prompt = "";
     try {
       if (sel && sel.trim()) {
-        prompt = `Keksi synonyymejä, riimiehdotuksia ja kielikuvia valitusta tekstistä:\n"${sel}"\n`;
-
-        prompt += `Etsi kontekstiin sopivia, mutta monipuolisia synonyymejä sanalle: "${lw}". Mukana saa olla sekä arkisia että runollisia vaihtoehtoja, mutta vältä keinotekoisia tai olemattomia sanoja.\n`;
-        prompt += `Ehdota lisäksi sopivia riimejä sanalle "${lw}" – vain olemassa olevia suomen sanoja.\n`;
-        prompt += `Keksi tuoreita ja omaperäisiä kielikuvia koko tekstistä, vältä kliseisiä rakkaus- tai tuli-vertauskuvia. Kielikuvat voivat olla myös arkipäiväisiä, humoristisia, yllättäviä, visuaalisia ja jopa surrealistisia, kunhan ne tukevat tekstin tunnetta.\n`;
+        prompt = `Etsi kontekstiin sopivia, mutta monipuolisia synonyymejä sanalle: "${sel}". Mukana saa olla sekä arkisia että runollisia vaihtoehtoja, mutta vältä keinotekoisia tai olemattomia sanoja.\n`;
+        prompt += `Ehdota lisäksi sopivia riimejä sanalle "${sel}" – vain olemassa olevia suomen sanoja.\n`;
+        prompt = `Keksi tuoreita ja omaperäisiä riimejä, synonyymejä ja kielikuvia valitusta tekstistä:\n"${sel}"\nVältä kliseisiä rakkaus- tai tuli-vertauskuvia. Kielikuvat voivat olla myös arkipäiväisiä, humoristisia, yllättäviä, visuaalisia ja jopa surrealistisia, kunhan ne tukevat tekstin tunnetta.\n`;
         prompt += `Ehdota myös muita kirjoittamisen tehokeinoja (esim. toisto, kontrasti, rytmi, odotuksen rikkominen, sanaleikki).`;
 
         if (freeform.trim()) prompt += `\nLisäohje: ${freeform.trim()}\n`;
