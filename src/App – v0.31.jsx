@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.32 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.31 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -42,12 +42,6 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
   useEffect(() => localStorage.setItem("lr_showSettings", String(showSettings)), [showSettings]);
   useEffect(() => localStorage.setItem("lr_wildness", String(wildness)), [wildness]);
   useEffect(() => localStorage.setItem("lr_freeform", freeform), [freeform]);
-
-  const [autoSuggest, setAutoSuggest] = useState(() => {
-    const s = localStorage.getItem("lr_autoSuggest");
-    return s === null ? true : s === "true";
-  });
-  useEffect(() => localStorage.setItem("lr_autoSuggest", String(autoSuggest)), [autoSuggest]);
 
   // --- Tekstit ---
   const [authorText, setAuthorText] = useState("");
@@ -317,7 +311,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.32 (gpt-4.1)</div>
+            <div style={versionInline}>v0.31 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -349,19 +343,6 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
       {showSettings && (
         <section ref={settingsRef} style={card}>
           {/* Checkboxit poistettu – MET/SYN/RHY aina päällä */}
-          <div style={{ marginTop: 0, marginBottom: 10 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-              <input
-                type="checkbox"
-                checked={autoSuggest}
-                onChange={(e) => setAutoSuggest(e.target.checked)}
-              />
-              <span>Automaattiset ehdotukset</span>
-            </label>
-            <div style={{ color: "#6b7280", fontSize: 12, marginLeft: 2 }}>
-              Kun tämä on päällä, Lyriikkarenki hakee ehdotuksia tauon ja Enterin jälkeen.
-            </div>
-          </div>
 
           <div style={{ marginTop: 0 }}>
             <label style={{ display: "block", fontWeight: 600, marginBottom: 6 }}>
@@ -450,7 +431,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
               const caret = e.target.selectionEnd ?? textNow.length;
               const line = getLineAt(textNow, caret);
               const lw = lastWord(line);
-              if (autoSuggest && lw && lw.length >= 4) {
+              if (lw && lw.length >= 4) {
                 typingTimerRef.current = setTimeout(() => {
                   askSmartSuggestions(line.trim(), "pause");
                 }, AUTO_DELAY_MS);
@@ -462,19 +443,15 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
                 const lineBeforeBreak = getLineAt(authorText, caret);
                 const lineTrim = (lineBeforeBreak || "").trim();
 
-                // EI automaattihakua, jos asetus pois päältä
-                if (!autoSuggest) {
-                  return; // pelkkä rivinvaihto, ei hakua
-                }
-
                 // Estä enter-haku, jos samasta rivistä tehtiin juuri "pause"-autohaku
                 const { line, at } = lastPauseRef.current || {};
-                const RECENT_MS = 60_000;
+                const RECENT_MS = 60_000; // salli Enter-haku vasta 60 s jälkeen tai kun rivi muuttuu
                 const justPausedSameLine =
                   line && line === lineTrim && Date.now() - at < RECENT_MS;
 
                 if (justPausedSameLine) {
-                  return; // ei hakua
+                  // ei hakua – käyttäjä vain teki rivinvaihdon aiemmin autohakuiltuun riviin
+                  return;
                 }
 
                 // Muuten tee normaali enter-haku (välitön)
@@ -562,19 +539,12 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
                 Voit myös valita tekstiä ja painaa <strong>Ehdota (valinta tai rivi)</strong> -painiketta. Tällöin riimiehdotukset, synonyymit ja kielikuvat liittyvät koko valittuun tekstiin.
                 Jos mitään ei ole valittuna, käsitellään kursorin rivin sisältö kuten automaattihaussa.
               </li>
-              <li>
-                Asetuksista voit kytkeä <strong>Automaattiset ehdotukset</strong> pois päältä.
-                Tällöin ehdotukset tulevat vain nappia painamalla.
-              </li>
             </ol>
 
             <h2>2. Asetukset ⚙</h2>
             <ul>
               <li>
                 Avaa asetukset oikean yläkulman <strong>⚙</strong>-painikkeesta.
-              </li>
-              <li>
-                Kun <strong>Automaattiset ehdotukset</strong> on päällä, tehdään automaattisia ehdotuksia 3s viiveellä ja rivinvaihdon jälkeen.
               </li>
               <li>
                 Kirjoita halutessasi <strong>vapaamuotoinen ohje tekoälylle</strong> — esim.:
