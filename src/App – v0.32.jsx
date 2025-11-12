@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.33 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.32 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -214,60 +214,51 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
     }
   };
 
-const askSuggestions = async () => {
-  // ----- talteen valinta ja fokus -----
-  const el = authorRef.current;
-  const hadSelection = !!el && el.selectionStart !== el.selectionEnd;
-  const selStart = el?.selectionStart ?? null;
-  const selEnd = el?.selectionEnd ?? null;
+  const askSuggestions = async () => {
+    setError("");
+    setLoading(true);
 
-  setError("");
-  setLoading(true);
-  let prompt = "";
-
-  try {
+    // 1) Jos on valinta → käytä sitä (nykyinen logiikka)
     const sel = getSelectedText();
-    if (sel && sel.trim()) {
-      prompt = `Keksi synonyymejä, riimiehdotuksia ja kielikuvia valitusta tekstistä:\n"${sel}"\n`;
-      if (freeform.trim()) prompt += `\nLisäohje: ${freeform.trim()}\n`;
-    } else {
-      const basis = getSelectionOrCurrentLine()?.trim() || "";
-      if (!basis) {
-        setLoading(false);
-        setError("Kirjoita riville tekstiä tai valitse jokin jakso.");
-        return;
-      }
-      prompt = buildPromptSmart(basis);
-      setLastPromptBasis(basis);
-    }
+    let prompt = "";
+    try {
+      if (sel && sel.trim()) {
+        prompt = `Etsi kontekstiin sopivia, mutta monipuolisia synonyymejä sanalle: "${sel}". Mukana saa olla sekä arkisia että runollisia vaihtoehtoja, mutta vältä keinotekoisia tai olemattomia sanoja.\n`;
+        prompt += `Ehdota lisäksi sopivia riimejä sanalle "${sel}" – vain olemassa olevia suomen sanoja.\n`;
+        prompt = `Keksi tuoreita ja omaperäisiä riimejä, synonyymejä ja kielikuvia valitusta tekstistä:\n"${sel}"\nVältä kliseisiä rakkaus- tai tuli-vertauskuvia. Kielikuvat voivat olla myös arkipäiväisiä, humoristisia, yllättäviä, visuaalisia ja jopa surrealistisia, kunhan ne tukevat tekstin tunnetta.\n`;
+        prompt += `Ehdota myös muita kirjoittamisen tehokeinoja (esim. toisto, kontrasti, rytmi, odotuksen rikkominen, sanaleikki).`;
 
-    const r = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, temperature: 1.0 }),
-    });
-    if (!r.ok) throw new Error(`API-virhe ${r.status}: ${await r.text()}`);
-    const data = await r.json();
-    const content = (data?.content || "").trim();
-    if (!content) throw new Error("Tyhjä vastaus.");
-    setRenkiText((prev) => prev + `---------------\n${content}\n`);
-  } catch (e) {
-    setError(e.message || String(e));
-  } finally {
-    setLoading(false);
-    if (devMode) setPromptPreview(prompt);
-
-    // ----- palauta fokus + valinta -----
-    if (el) {
-      // fokus takaisin ilman scrollausta
-      el.focus({ preventScroll: true });
-      if (hadSelection && selStart !== null && selEnd !== null) {
-        // palautetaan täsmälleen sama valinta
-        el.setSelectionRange(selStart, selEnd);
+        if (freeform.trim()) prompt += `\nLisäohje: ${freeform.trim()}\n`;
+      } else {
+        // 2) Muuten käytä KURSORIRIVIÄ kuten automaattihaussa
+        const basis = getSelectionOrCurrentLine()?.trim() || "";
+        if (!basis) {
+          setLoading(false);
+          setError("Kirjoita riville tekstiä tai valitse jokin jakso.");
+          return;
+        }
+        prompt = buildPromptSmart(basis);
+        // dev-esikatseluun talteen täsmälleen sama rivi
+        setLastPromptBasis(basis);
       }
+
+      const r = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, temperature: 1.0 }),
+      });
+      if (!r.ok) throw new Error(`API-virhe ${r.status}: ${await r.text()}`);
+      const data = await r.json();
+      const content = (data?.content || "").trim();
+      if (!content) throw new Error("Tyhjä vastaus.");
+      setRenkiText((prev) => prev + `---------------\n${content}\n`);
+    } catch (e) {
+      setError(e.message || String(e));
+    } finally {
+      setLoading(false);
+      if (devMode) setPromptPreview(prompt);
     }
-  }
-};
+  };
 
   // --- Auto-scroll Ehdotukset-ikkunaan ---
   useEffect(() => {
@@ -326,7 +317,7 @@ const askSuggestions = async () => {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.33 (gpt-4.1)</div>
+            <div style={versionInline}>v0.32 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -411,8 +402,6 @@ const askSuggestions = async () => {
       <section ref={toolbarRef} style={toolbarWrap}>
         {/* Manuaalinen Ehdota (vain valinnasta) */}
         <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}   // estää fokuksen siirtymisen pois tekstialueesta
           onClick={askSuggestions}
           disabled={loading}
           style={{
@@ -420,8 +409,9 @@ const askSuggestions = async () => {
             cursor: loading ? "wait" : "pointer",
             opacity: loading ? 0.7 : 1,
           }}
+
         >
-          Ehdota (valinta tai rivi)
+        Ehdota (valinta tai nykyrivi)
         </button>
 
         {/* Automaattisen haun indikaattori (näkyy myös kun nappia ei paineta) */}
