@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.34 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
- */
+ * Lyriikkarenki
+**/
+
+const LR_VERSION = "0.35";
 
 export default function App() {
   // --- UI ---
@@ -172,10 +174,10 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
     let p = `Teksti analysoitavaksi:\n"${txt}"\n`;
     if (wc >= 1 && lw) {
       p += `Etsi kontekstiin sopivia, mutta monipuolisia synonyymejä sanalle: "${lw}". Mukana saa olla sekä arkisia että runollisia vaihtoehtoja, mutta vältä keinotekoisia tai olemattomia sanoja.\n`;
-      p += `Ehdota lisäksi puhtaita riimejä sanalle "${lw}" – vain olemassa olevia suomenkielisiä sanoja.\n`;
+      p += `Ehdota lisäksi puhtaita riimejä sanalle "${lw}" – vain olemassa olevia suomenkielisiä sanoja.`;
     }
     if (wc >= 2) {
-      p += `Keksi tuoreita ja omaperäisiä kielikuvia koko tekstistä, vältä kliseisiä rakkaus- tai tuli-vertauskuvia. Kielikuvat voivat olla myös arkipäiväisiä, humoristisia, yllättäviä, visuaalisia ja jopa surrealistisia, kunhan ne tukevat tekstin tunnetta.\n`;
+      p += `\nKeksi tuoreita ja omaperäisiä kielikuvia analysoitavasta tekstistä, vältä kliseisiä rakkaus- tai tuli-vertauskuvia. Kielikuvat voivat olla myös arkipäiväisiä, humoristisia, yllättäviä, visuaalisia ja jopa surrealistisia, kunhan ne tukevat tekstin tunnetta.\n`;
       p += `Ehdota myös muita kirjoittamisen tehokeinoja (esim. toisto, kontrasti, rytmi, odotuksen rikkominen, sanaleikki).`;
     }
     if (freeform.trim()) p += `\nLisäohje: ${freeform.trim()}\n`;
@@ -231,7 +233,7 @@ const askSuggestions = async () => {
     if (sel && sel.trim()) {
       prompt = `Etsi kontekstiin sopivia, mutta monipuolisia synonyymejä sanalle: "${sel}". Mukana saa olla sekä arkisia että runollisia vaihtoehtoja, mutta vältä keinotekoisia tai olemattomia sanoja.\n`;
       prompt += `Ehdota lisäksi puhtaita riimejä sanalle "${sel}" – vain olemassa olevia suomenkielisiä sanoja.\n`;
-      prompt = `Keksi tuoreita ja omaperäisiä riimejä, synonyymejä ja kielikuvia valitusta tekstistä:\n"${sel}"\nVältä kliseisiä rakkaus- tai tuli-vertauskuvia. Kielikuvat voivat olla myös arkipäiväisiä, humoristisia, yllättäviä, visuaalisia ja jopa surrealistisia, kunhan ne tukevat tekstin tunnetta.\n`;
+      prompt = `Keksi tuoreita ja omaperäisiä riimejä, synonyymejä ja kielikuvia analysoitavasta tekstistä:\n"${sel}"\nVältä kliseisiä rakkaus- tai tuli-vertauskuvia. Kielikuvat voivat olla myös arkipäiväisiä, humoristisia, yllättäviä, visuaalisia ja jopa surrealistisia, kunhan ne tukevat tekstin tunnetta.\n`;
       prompt += `Ehdota myös muita kirjoittamisen tehokeinoja (esim. toisto, kontrasti, rytmi, odotuksen rikkominen, sanaleikki).`;
       if (freeform.trim()) prompt += `\nLisäohje: ${freeform.trim()}\n`;
     } else {
@@ -330,7 +332,7 @@ const askSuggestions = async () => {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.34 (gpt-4.1)</div>
+            <div style={versionInline}>v{LR_VERSION} (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -661,7 +663,7 @@ const getLineAt = (text, caretEnd) => {
 
 // EHDOTA-nappulan builderi
 const buildPromptSelected = (sel) => {
-  let p = `Keksi synonyymejä, riimiehdotuksia ja kielikuvia valitusta tekstistä:\n"${sel}"\n`;
+  let p = `Keksi synonyymejä, riimiehdotuksia ja kielikuvia analysoitavasta tekstistä:\n"${sel}"\n`;
   if (freeform.trim()) p += `\nLisäohje: ${freeform.trim()}\n`;
   return p;
 };
