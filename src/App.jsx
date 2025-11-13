@@ -172,7 +172,7 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
     let p = `Teksti analysoitavaksi:\n"${txt}"\n`;
     if (wc >= 1 && lw) {
       p += `Etsi kontekstiin sopivia, mutta monipuolisia synonyymejä sanalle: "${lw}". Mukana saa olla sekä arkisia että runollisia vaihtoehtoja, mutta vältä keinotekoisia tai olemattomia sanoja.\n`;
-      p += `Ehdota lisäksi sopivia riimejä sanalle "${lw}" – vain olemassa olevia suomen sanoja.\n`;
+      p += `Ehdota lisäksi puhtaita riimejä sanalle "${lw}" – vain olemassa olevia suomenkielisiä sanoja.\n`;
     }
     if (wc >= 2) {
       p += `Keksi tuoreita ja omaperäisiä kielikuvia koko tekstistä, vältä kliseisiä rakkaus- tai tuli-vertauskuvia. Kielikuvat voivat olla myös arkipäiväisiä, humoristisia, yllättäviä, visuaalisia ja jopa surrealistisia, kunhan ne tukevat tekstin tunnetta.\n`;
@@ -230,7 +230,7 @@ const askSuggestions = async () => {
     const sel = getSelectedText();
     if (sel && sel.trim()) {
       prompt = `Etsi kontekstiin sopivia, mutta monipuolisia synonyymejä sanalle: "${sel}". Mukana saa olla sekä arkisia että runollisia vaihtoehtoja, mutta vältä keinotekoisia tai olemattomia sanoja.\n`;
-      prompt += `Ehdota lisäksi sopivia riimejä sanalle "${sel}" – vain olemassa olevia suomen sanoja.\n`;
+      prompt += `Ehdota lisäksi puhtaita riimejä sanalle "${sel}" – vain olemassa olevia suomenkielisiä sanoja.\n`;
       prompt = `Keksi tuoreita ja omaperäisiä riimejä, synonyymejä ja kielikuvia valitusta tekstistä:\n"${sel}"\nVältä kliseisiä rakkaus- tai tuli-vertauskuvia. Kielikuvat voivat olla myös arkipäiväisiä, humoristisia, yllättäviä, visuaalisia ja jopa surrealistisia, kunhan ne tukevat tekstin tunnetta.\n`;
       prompt += `Ehdota myös muita kirjoittamisen tehokeinoja (esim. toisto, kontrasti, rytmi, odotuksen rikkominen, sanaleikki).`;
       if (freeform.trim()) prompt += `\nLisäohje: ${freeform.trim()}\n`;
@@ -238,7 +238,7 @@ const askSuggestions = async () => {
       const basis = getSelectionOrCurrentLine()?.trim() || "";
       if (!basis) {
         setLoading(false);
-        setError("Kirjoita riville tekstiä tai valitse jokin jakso.");
+        setError("Kirjoita riville tekstiä tai valitse tekstiä sanoituksesta.");
         return;
       }
       prompt = buildPromptSmart(basis);
