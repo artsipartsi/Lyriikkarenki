@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * Lyriikkarenki – v0.33 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
+ * Lyriikkarenki – v0.34 (Help-overlay + auto-scroll Ehdotukset + MET/SYN/RHY always on)
  */
 
 export default function App() {
@@ -152,7 +152,8 @@ const [lastPromptBasis, setLastPromptBasis] = useState("");
     if (!devMode) return;
     const basis = basisArg ?? getSelectionOrCurrentLine();
     const builder = mode === "selected" ? buildPromptSelected : buildPromptSmart;
-    setPromptPreview(builder(basis || "<ei valintaa / kursoririvi tyhjä>"));
+    //setPromptPreview(builder(basis || "<ei valintaa / kursoririvi tyhjä>"));
+    setPromptPreview(builder(basis || ""));
   };
   useEffect(() => {
     refreshPromptPreview();
@@ -228,7 +229,10 @@ const askSuggestions = async () => {
   try {
     const sel = getSelectedText();
     if (sel && sel.trim()) {
-      prompt = `Keksi synonyymejä, riimiehdotuksia ja kielikuvia valitusta tekstistä:\n"${sel}"\n`;
+      prompt = `Etsi kontekstiin sopivia, mutta monipuolisia synonyymejä sanalle: "${sel}". Mukana saa olla sekä arkisia että runollisia vaihtoehtoja, mutta vältä keinotekoisia tai olemattomia sanoja.\n`;
+      prompt += `Ehdota lisäksi sopivia riimejä sanalle "${sel}" – vain olemassa olevia suomen sanoja.\n`;
+      prompt = `Keksi tuoreita ja omaperäisiä riimejä, synonyymejä ja kielikuvia valitusta tekstistä:\n"${sel}"\nVältä kliseisiä rakkaus- tai tuli-vertauskuvia. Kielikuvat voivat olla myös arkipäiväisiä, humoristisia, yllättäviä, visuaalisia ja jopa surrealistisia, kunhan ne tukevat tekstin tunnetta.\n`;
+      prompt += `Ehdota myös muita kirjoittamisen tehokeinoja (esim. toisto, kontrasti, rytmi, odotuksen rikkominen, sanaleikki).`;
       if (freeform.trim()) prompt += `\nLisäohje: ${freeform.trim()}\n`;
     } else {
       const basis = getSelectionOrCurrentLine()?.trim() || "";
@@ -326,7 +330,7 @@ const askSuggestions = async () => {
 
           <div style={titleRowCentered}>
             <div style={titleStyle}>Lyriikkarenki</div>
-            <div style={versionInline}>v0.33 (gpt-4.1)</div>
+            <div style={versionInline}>v0.34 (gpt-4.1)</div>
           </div>
 
           {/* ?-nappi */}
@@ -560,21 +564,14 @@ const askSuggestions = async () => {
                 Kirjoita tai liitä teksti <strong>Sanoitus</strong>-kenttään vasemmalla.
               </li>
               <li>
-                Odota hetki: jos olet kirjoittanut vähintään nelikirjaimisen sanan ja et kirjoita n. <strong>3 sekuntiin</strong>, tekoäly hakee automaattisesti ehdotuksia. Haun aikana näkyy keltapohjainen "Haetaan.."-indikaattori, mutta tekstiä voi kirjoittaa silloinkin. Riimiehdotukset ja synonyymit liittyvät rivin viimeiseen sanaan, kielikuvat koko riviin. Rivillä on oltava vähintään kaksi sanaa, jotta kielikuvia haettaisiin.
-              </li>
-              <li>
-                Myös rivinvaihto tekee ehdotuksia samalla systeemillä.
-              </li>
-              <li>
-                Ehdotukset ilmestyvät oikeanpuoleiseen <strong>Ehdotukset</strong>-ikkunaan ja skrollaavat automaattisesti näkyviin.
+                Jos <strong>Automaattiset ehdotukset</strong>-asetus on päällä, odota hetki: jos olet kirjoittanut vähintään nelikirjaimisen sanan ja et kirjoita n. <strong>3 sekuntiin</strong>, tekoäly hakee automaattisesti ehdotuksia. Haun aikana näkyy keltapohjainen "Haetaan.."-indikaattori, mutta tekstiä voi kirjoittaa silloinkin. Riimiehdotukset ja synonyymit liittyvät rivin viimeiseen sanaan, kielikuvat koko riviin. Rivillä on oltava vähintään kaksi sanaa, jotta kielikuvia haettaisiin. Myös rivinvaihto tekee ehdotuksia samalla systeemillä.
               </li>
               <li>
                 Voit myös valita tekstiä ja painaa <strong>Ehdota (valinta tai rivi)</strong> -painiketta. Tällöin riimiehdotukset, synonyymit ja kielikuvat liittyvät koko valittuun tekstiin.
                 Jos mitään ei ole valittuna, käsitellään kursorin rivin sisältö kuten automaattihaussa.
               </li>
               <li>
-                Asetuksista voit kytkeä <strong>Automaattiset ehdotukset</strong> pois päältä.
-                Tällöin ehdotukset tulevat vain nappia painamalla.
+                Ehdotukset ilmestyvät oikeanpuoleiseen <strong>Ehdotukset</strong>-ikkunaan ja skrollaavat automaattisesti näkyviin.
               </li>
             </ol>
 
